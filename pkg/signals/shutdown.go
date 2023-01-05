@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pecigonzalo/kafka-canary/pkg/canary"
+	"github.com/pecigonzalo/kafka-canary/pkg/workers"
 	"github.com/rs/zerolog"
 )
 
@@ -23,13 +25,17 @@ func NewShutdown(serverShutdownTimeout time.Duration, logger *zerolog.Logger) (*
 	return srv, nil
 }
 
-func (s *Shutdown) Graceful(stopCh <-chan struct{}, httpServer *http.Server, healthy *int32, ready *int32) {
+func (s *Shutdown) Graceful(stopCh <-chan struct{}, httpServer *http.Server, canaryManager workers.Worker, healthy *int32, ready *int32) {
 	ctx := context.Background()
 
 	// wait for SIGTERM or SIGINT
 	<-stopCh
 	ctx, cancel := context.WithTimeout(ctx, s.serverShutdownTimeout)
 	defer cancel()
+
+	s.logger.Info().
+		Msg("Shutting down canary manager")
+	canaryManager.Stop()
 
 	// all calls to /healthz and /readyz will fail from now on
 	atomic.StoreInt32(healthy, 0)
@@ -49,4 +55,5 @@ func (s *Shutdown) Graceful(stopCh <-chan struct{}, httpServer *http.Server, hea
 			s.logger.Error().Err(err).Msg("HTTP server graceful shutdown failed")
 		}
 	}
+
 }

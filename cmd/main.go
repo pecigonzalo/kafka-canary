@@ -7,14 +7,26 @@ import (
 	"time"
 
 	"github.com/pecigonzalo/kafka-canary/pkg/api"
+	"github.com/pecigonzalo/kafka-canary/pkg/canary"
+	"github.com/pecigonzalo/kafka-canary/pkg/client"
+	"github.com/pecigonzalo/kafka-canary/pkg/services"
 	"github.com/pecigonzalo/kafka-canary/pkg/signals"
+	"github.com/pecigonzalo/kafka-canary/pkg/workers"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 var (
-	version = "development"
+	version              = "development"
+	metrics_namespace    = "kafka_canary"
+	clientCreationFailed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:      "client_creation_error_total",
+		Namespace: metrics_namespace,
+		Help:      "Total number of errors while creating Kafka client",
+	}, nil)
 )
 
 func main() {
@@ -72,9 +84,37 @@ func main() {
 	srv, _ := api.NewServer(&srvCfg, &logger)
 	httpServer, healthy, ready := srv.ListenAndServe()
 
+	// setup the canary services
+	canaryConfig := canary.Config{
+		ReconcileInterval:           30 * time.Second,
+		StatusCheckInterval:         30 * time.Second,
+		BootstrapBackoffMaxAttempts: 10,
+		BootstrapBackoffScale:       5 * time.Second,
+	}
+	clientConfig := client.Config{}
+
+	producerClient, err := client.NewClient(canaryConfig, clientConfig)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Error creating producer client")
+	}
+	consumerClient, err := client.NewClient(canaryConfig, clientConfig)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Error creating consumer client")
+	}
+
+	topicService := services.NewTopicService(canaryConfig, clientConfig)
+	producerService := services.NewProducerService(canaryConfig, producerClient)
+	consumerService := services.NewConsumerService(canaryConfig, consumerClient)
+	connectionService := services.NewConnectionService(canaryConfig, clientConfig)
+	statusService := services.NewStatusServiceService(canaryConfig, &logger)
+
+	// start canary manager
+	canaryManager := workers.NewCanaryManager(canaryConfig, topicService, producerService, consumerService, connectionService, statusService, &logger)
+	canaryManager.Start()
+
 	// graceful shutdown
 	stopCh := signals.SetupSignalHandler()
 	serverShutdownTimeout := 5 * time.Second
 	sd, _ := signals.NewShutdown(serverShutdownTimeout, &logger)
-	sd.Graceful(stopCh, httpServer, healthy, ready)
+	sd.Graceful(stopCh, httpServer, canaryManager, healthy, ready)
 }
