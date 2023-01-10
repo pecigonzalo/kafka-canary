@@ -30,9 +30,9 @@ const (
 
 // ConnectorConfig contains the configuration used to contruct a connector.
 type ConnectorConfig struct {
-	BrokerAddr string
-	TLS        TLSConfig
-	SASL       SASLConfig
+	BrokerAddrs []string
+	TLS         TLSConfig
+	SASL        SASLConfig
 }
 
 // TLSConfig stores the TLS-related configuration for a connection.
@@ -151,7 +151,7 @@ func NewConnector(config ConnectorConfig) (*Connector, error) {
 	}
 
 	connector.KafkaClient = &kafka.Client{
-		Addr: kafka.TCP(config.BrokerAddr),
+		Addr: kafka.TCP(config.BrokerAddrs...),
 		Transport: &kafka.Transport{
 			Dial: connector.Dialer.DialFunc,
 			SASL: mechanismClient,

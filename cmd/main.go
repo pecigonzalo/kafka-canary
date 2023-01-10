@@ -60,12 +60,13 @@ func main() {
 		os.Exit(2)
 	}
 	zerolog.SetGlobalLevel(level)
-	logger := zerolog.New(os.Stdout).With().
+	// TODO: Change to conditional
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().
 		Timestamp().
 		Str("service", "kafka-canary").
 		Logger()
 
-		// validate port
+	// validate port
 	if _, err := strconv.Atoi(viper.GetString("port")); err != nil {
 		port, _ := fs.GetInt("port")
 		viper.Set("port", strconv.Itoa(port))
@@ -86,21 +87,31 @@ func main() {
 
 	// setup the canary services
 	canaryConfig := canary.Config{
-		Topic:                       "__kafka_canary.1",
-		ReconcileInterval:           30 * time.Second,
+		Topic:    "__kafka_canary.3",
+		ClientID: "kafka-canary-client",
+		// ProducerLatencyBuckets:      []float64{2, 5, 10, 20, 50, 100, 200, 400},
+		ProducerLatencyBuckets: []float64{100, 500, 1000, 1500, 2000, 4000, 8000},
+		// EndToEndLatencyBuckets:      []float64{5, 10, 20, 50, 100, 200, 400, 800},
+		EndToEndLatencyBuckets:      []float64{100, 500, 1000, 2000, 8000, 10000, 12000, 15000},
+		ConsumerGroupID:             "kafka-canary-group",
+		ReconcileInterval:           5 * time.Second,
 		StatusCheckInterval:         30 * time.Second,
 		BootstrapBackoffMaxAttempts: 10,
 		BootstrapBackoffScale:       5 * time.Second,
 	}
 	connectorConfig := client.ConnectorConfig{
-		BrokerAddr: "b-1.streamingplatformpr.ieik6g.c8.kafka.eu-central-1.amazonaws.com:9098",
-		TLS:        client.TLSConfig{Enabled: true},
-		SASL:       client.SASLConfig{Enabled: true, Mechanism: client.SASLMechanismAWSMSKIAM},
+		BrokerAddrs: []string{
+			"b-1.streamingplatformpr.ieik6g.c8.kafka.eu-central-1.amazonaws.com:9098",
+			"b-2.streamingplatformpr.ieik6g.c8.kafka.eu-central-1.amazonaws.com:9098",
+			"b-4.streamingplatformpr.ieik6g.c8.kafka.eu-central-1.amazonaws.com:9098",
+		},
+		TLS:  client.TLSConfig{Enabled: true},
+		SASL: client.SASLConfig{Enabled: true, Mechanism: client.SASLMechanismAWSMSKIAM},
 	}
 
 	topicService := services.NewTopicService(canaryConfig, connectorConfig, &logger)
 	producerService := services.NewProducerService(canaryConfig, connectorConfig, &logger)
-	consumerService := services.NewConsumerService(canaryConfig, connectorConfig)
+	consumerService := services.NewConsumerService(canaryConfig, connectorConfig, &logger)
 	connectionService := services.NewConnectionService(canaryConfig, connectorConfig)
 	statusService := services.NewStatusServiceService(canaryConfig, &logger)
 

@@ -23,7 +23,7 @@ func TestBrokerClientGetClusterID(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -38,7 +38,7 @@ func TestBrokerClientGetClusterID(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 			ExpectedClusterID: clusterID,
 		},
@@ -50,7 +50,7 @@ func TestBrokerClientGetClusterID(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 			ExpectedClusterID: "bad-cluster-id",
 		},
@@ -69,7 +69,7 @@ func TestBrokerClientUpdateTopicConfig(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -176,7 +176,7 @@ func TestBrokerClientBrokers(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -300,7 +300,7 @@ func TestBrokerClientBrokerIndices(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -336,7 +336,7 @@ func TestBrokerClientAddPartitions(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -405,7 +405,7 @@ func TestBrokerClientAlterAssignments(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -498,7 +498,7 @@ func TestBrokerClientRunLeaderElection(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -540,7 +540,7 @@ func TestBrokerClientGetApiVersions(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},
@@ -561,7 +561,7 @@ func TestBrokerClientCreateTopicError(t *testing.T) {
 		ctx,
 		BrokerAdminClientConfig{
 			ConnectorConfig: ConnectorConfig{
-				BrokerAddr: util.TestKafkaAddr(),
+				BrokerAddrs: []string{util.TestKafkaAddr()},
 			},
 		},
 		&zerolog.Logger{},

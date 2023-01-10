@@ -54,6 +54,10 @@ func (s *Server) ListenAndServe() (*http.Server, *int32, *int32) {
 	// Install some provided extra handler to set some request's context fields.
 	// Thanks to that handler, all our logs will come with some prepopulated fields.
 	chain = chain.Append(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+		// NOTE: There has to be a more elegant way of doing this
+		if r.URL.String() == "/metrics" {
+			return
+		}
 		hlog.FromRequest(r).Info().
 			Str("method", r.Method).
 			Stringer("url", r.URL).

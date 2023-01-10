@@ -1,6 +1,9 @@
 package services
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 // ErrExpectedClusterSize defines the error raised when the expected cluster size is not met
 type ErrExpectedClusterSize struct{}
@@ -34,6 +37,6 @@ type ProducerService interface {
 type ConsumerService interface {
 	Consume()
 	Refresh()
-	Leaders() (map[int32]int32, error)
+	Leaders(context.Context) (map[int]int, error)
 	Close()
 }

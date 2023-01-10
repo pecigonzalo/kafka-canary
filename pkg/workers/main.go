@@ -2,6 +2,7 @@
 package workers
 
 import (
+	"context"
 	"reflect"
 	"sync"
 	"time"
@@ -92,7 +93,8 @@ func (cm *CanaryManager) Start() {
 		}
 	}
 
-	ticker := time.NewTicker(cm.canaryConfig.ReconcileInterval * time.Millisecond)
+	cm.logger.Info().Dur("interval", cm.canaryConfig.ReconcileInterval).Msg("Running reconciliation loop")
+	ticker := time.NewTicker(cm.canaryConfig.ReconcileInterval)
 	go func() {
 		for {
 			select {
@@ -126,20 +128,18 @@ func (cm *CanaryManager) Stop() {
 }
 
 func (cm *CanaryManager) reconcile() {
-	cm.logger.Info().Msg("Canary manager reconcile ...")
+	cm.logger.Info().Msg("Canary manager reconcile")
 
 	if result, err := cm.topicService.Reconcile(); err == nil {
 		if result.RefreshProducerMetadata {
 			cm.producerService.Refresh()
 		}
 
-		leaders, err := cm.consumerService.Leaders()
+		leaders, err := cm.consumerService.Leaders(context.Background())
 		if err != nil || !reflect.DeepEqual(result.Leaders, leaders) {
 			cm.consumerService.Refresh()
 		}
 		// producer has to send to partitions assigned to brokers
 		cm.producerService.Send(result.Assignments)
 	}
-
-	cm.logger.Info().Msg("... reconcile done")
 }

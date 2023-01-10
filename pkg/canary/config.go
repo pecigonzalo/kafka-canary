@@ -10,4 +10,6 @@ type Config struct {
 	BootstrapBackoffMaxAttempts int
 	BootstrapBackoffScale       time.Duration
 	ProducerLatencyBuckets      []float64
+	EndToEndLatencyBuckets      []float64
+	ConsumerGroupID             string
 }

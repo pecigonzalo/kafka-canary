@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/pecigonzalo/kafka-canary/pkg/canary"
 	"github.com/pecigonzalo/kafka-canary/pkg/client"
@@ -98,13 +99,20 @@ func (s topicService) Reconcile() (TopicReconcileResult, error) {
 		return result, err
 	}
 
+	// assignment := s.requestAssignments()
+
 	// Create the topic if missing
+	// TODO: Update parition config if missmatch
 	if err == client.ErrTopicDoesNotExist {
 		err = s.admin.CreateTopic(ctx, kafka.TopicConfig{
 			Topic:             s.canaryConfig.Topic,
-			NumPartitions:     1,
+			NumPartitions:     3,
 			ReplicationFactor: 3,
-			ConfigEntries:     []kafka.ConfigEntry{},
+			// ReplicaAssignments: assignment,
+			ConfigEntries: []kafka.ConfigEntry{
+				{ConfigName: "cleanup.policy", ConfigValue: "delete"},
+				{ConfigName: "min.insync.replicas", ConfigValue: strconv.Itoa(3)}, // TODO: Get broker count from Kafka
+			},
 		})
 		if err != nil {
 			labels := prometheus.Labels{
@@ -160,4 +168,33 @@ func (s topicService) Close() {
 		s.logger.Fatal().Err(err).Msg("Error closing cluster admin")
 	}
 	s.admin = nil
+}
+
+func (s *topicService) requestAssignments() {
+	// TODO: Implement
+	// brokers, err := s.admin.GetBrokerIDs(ctx)
+	// if err != nil {
+	// 	s.logger.Fatal().Err(err).Msg("Error getting broker information")
+	// }
+	//
+	// brokersNumber := len(brokers)
+	// partitions := max(currentPartitions, brokersNumber)
+	// replicationFactor := min(brokersNumber, 3)
+	// minISR := max(1, replicationFactor-1)
+	//
+	// assignments := kafka.PartitionAssignment{}
+}
+
+func max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}
+
+func min(x, y int) int {
+	if x > y {
+		return y
+	}
+	return x
 }

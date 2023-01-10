@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pecigonzalo/kafka-canary/pkg/canary"
@@ -62,7 +63,7 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 	logger.Info().Msg("Created producer service client")
 
 	producer := &kafka.Writer{
-		Addr:      kafka.TCP(connectorConfig.BrokerAddr),
+		Addr:      kafka.TCP(connectorConfig.BrokerAddrs...),
 		Transport: client.KafkaClient.Transport,
 		Topic:     canaryConfig.Topic,
 	}
@@ -86,15 +87,15 @@ func (s *producerService) Send(partitionAssignments []int) {
 			Value:     []byte(value.Json()),
 		}
 		s.logger.Info().
-			Str("value", value.Json()).
+			Str("value", value.String()).
 			Int("partition", i).
-			Msgf("Sending message: value=%s on partition=%s", msg.Value, msg.Partition)
+			Msgf("Sending message")
 
 		err := s.producer.WriteMessages(context.Background(), msg)
 		timestamp := time.Now().UnixMilli()
 		labels := prometheus.Labels{
 			"clientid":  s.canaryConfig.ClientID,
-			"partition": string(i),
+			"partition": fmt.Sprintf("%v", i),
 		}
 		recordsProduced.With(labels).Inc()
 		RecordsProducedCounter++
@@ -106,7 +107,8 @@ func (s *producerService) Send(partitionAssignments []int) {
 			duration := timestamp - value.Timestamp
 			s.logger.Info().
 				Int("partition", i).
-				Msgf("Message sent: partition=%d, duration=%d ms", i, duration)
+				Int64("duration", duration).
+				Msgf("Message sent")
 			recordsProducedLatency.With(labels).Observe(float64(duration))
 		}
 	}
