@@ -7,7 +7,7 @@ import (
 
 type consumerService struct{}
 
-func NewConsumerService(canary canary.Config, consumer *client.Client) ConsumerService {
+func NewConsumerService(canary canary.Config, connectorConfig client.ConnectorConfig) ConsumerService {
 	return &consumerService{}
 }
 

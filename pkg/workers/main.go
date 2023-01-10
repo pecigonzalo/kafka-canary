@@ -72,6 +72,7 @@ func (cm *CanaryManager) Start() {
 	for {
 		// start first reconcile immediately
 		if result, err := cm.topicService.Reconcile(); err == nil {
+			cm.logger.Info().Msg("Consume and produce")
 			// consumer will subscribe to the topic so all partitions (even if we have less brokers)
 			cm.consumerService.Consume()
 			// producer has to send to partitions assigned to brokers

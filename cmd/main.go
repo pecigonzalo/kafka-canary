@@ -86,26 +86,22 @@ func main() {
 
 	// setup the canary services
 	canaryConfig := canary.Config{
+		Topic:                       "__kafka_canary.1",
 		ReconcileInterval:           30 * time.Second,
 		StatusCheckInterval:         30 * time.Second,
 		BootstrapBackoffMaxAttempts: 10,
 		BootstrapBackoffScale:       5 * time.Second,
 	}
-	clientConfig := client.Config{}
-
-	producerClient, err := client.NewClient(canaryConfig, clientConfig)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating producer client")
-	}
-	consumerClient, err := client.NewClient(canaryConfig, clientConfig)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating consumer client")
+	connectorConfig := client.ConnectorConfig{
+		BrokerAddr: "b-1.streamingplatformpr.ieik6g.c8.kafka.eu-central-1.amazonaws.com:9098",
+		TLS:        client.TLSConfig{Enabled: true},
+		SASL:       client.SASLConfig{Enabled: true, Mechanism: client.SASLMechanismAWSMSKIAM},
 	}
 
-	topicService := services.NewTopicService(canaryConfig, clientConfig)
-	producerService := services.NewProducerService(canaryConfig, producerClient)
-	consumerService := services.NewConsumerService(canaryConfig, consumerClient)
-	connectionService := services.NewConnectionService(canaryConfig, clientConfig)
+	topicService := services.NewTopicService(canaryConfig, connectorConfig, &logger)
+	producerService := services.NewProducerService(canaryConfig, connectorConfig, &logger)
+	consumerService := services.NewConsumerService(canaryConfig, connectorConfig)
+	connectionService := services.NewConnectionService(canaryConfig, connectorConfig)
 	statusService := services.NewStatusServiceService(canaryConfig, &logger)
 
 	// start canary manager

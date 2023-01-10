@@ -26,7 +26,7 @@ type TopicService interface {
 }
 
 type ProducerService interface {
-	Send(partitionsAssignments map[int32][]int32)
+	Send(partitionsAssignments []int)
 	Refresh()
 	Close()
 }

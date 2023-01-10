@@ -7,7 +7,7 @@ import (
 
 type connectionService struct{}
 
-func NewConnectionService(canary canary.Config, client client.Config) ConnectionService {
+func NewConnectionService(canary canary.Config, connectorConfig client.ConnectorConfig) ConnectionService {
 	return &connectionService{}
 }
 
