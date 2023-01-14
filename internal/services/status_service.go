@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/pkg/canary"
-	"github.com/pecigonzalo/kafka-canary/pkg/services/internal/util"
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/services/util"
 	"github.com/rs/zerolog"
 )
 

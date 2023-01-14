@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/pkg/api"
-	"github.com/pecigonzalo/kafka-canary/pkg/canary"
-	"github.com/pecigonzalo/kafka-canary/pkg/client"
-	"github.com/pecigonzalo/kafka-canary/pkg/services"
-	"github.com/pecigonzalo/kafka-canary/pkg/signals"
-	"github.com/pecigonzalo/kafka-canary/pkg/workers"
+	"github.com/pecigonzalo/kafka-canary/internal/api"
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/client"
+	"github.com/pecigonzalo/kafka-canary/internal/services"
+	"github.com/pecigonzalo/kafka-canary/internal/signals"
+	"github.com/pecigonzalo/kafka-canary/internal/workers"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
@@ -22,10 +22,10 @@ import (
 
 var (
 	version              = "development"
-	metrics_namespace    = "kafka_canary"
+	metricsNamespace     = "kafka_canary"
 	clientCreationFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "client_creation_error_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Total number of errors while creating Kafka client",
 	}, nil)
 )

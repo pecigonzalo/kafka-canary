@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/pecigonzalo/kafka-canary/pkg/canary"
-	"github.com/pecigonzalo/kafka-canary/pkg/client"
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/client"
 )
 
 type connectionService struct{}

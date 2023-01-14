@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/pkg/workers"
+	"github.com/pecigonzalo/kafka-canary/internal/workers"
 	"github.com/rs/zerolog"
 )
 

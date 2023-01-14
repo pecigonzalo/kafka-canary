@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/pkg/canary"
-	"github.com/pecigonzalo/kafka-canary/pkg/client"
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
