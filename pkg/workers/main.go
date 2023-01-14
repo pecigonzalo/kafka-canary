@@ -68,30 +68,15 @@ func (cm *CanaryManager) Start() {
 	cm.connectionService.Open()
 	cm.statusService.Open()
 
-	// using the same bootstrap configuration that makes sense during the canary start up
-	backoff := services.NewBackoff(cm.canaryConfig.BootstrapBackoffMaxAttempts, cm.canaryConfig.BootstrapBackoffScale*time.Millisecond, services.MaxDefault)
-	for {
-		// start first reconcile immediately
-		if result, err := cm.topicService.Reconcile(); err == nil {
-			cm.logger.Info().Msg("Consume and produce")
-			// consumer will subscribe to the topic so all partitions (even if we have less brokers)
-			cm.consumerService.Consume()
-			// producer has to send to partitions assigned to brokers
-			cm.producerService.Send(result.Assignments)
-			break
-		} else if e, ok := err.(*services.ErrExpectedClusterSize); ok {
-			// if the "dynamic" reassignment is disabled, an error may occur with expected cluster size not met yet
-			delay, backoffErr := backoff.Delay()
-			if backoffErr != nil {
-				cm.logger.Fatal().Msgf("Max attempts waiting for the expected cluster size: %v", e)
-			}
-			expectedClusterSizeError.With(nil).Inc()
-			cm.logger.Warn().Msgf("Error on expected cluster size. Retrying in %d ms", delay.Milliseconds())
-			time.Sleep(delay)
-		} else {
-			cm.logger.Fatal().Err(err).Msgf("Error starting canary manager: %v", err)
-		}
+	result, err := cm.topicService.Reconcile()
+	if err != nil {
+		cm.logger.Fatal().Err(err).Msg("Error starting canary manager")
 	}
+	cm.logger.Info().Msg("Consume and produce")
+	// consumer will subscribe to the topic so all partitions (even if we have less brokers)
+	cm.consumerService.Consume()
+	// producer has to send to partitions assigned to brokers
+	cm.producerService.Send(result.Assignments)
 
 	cm.logger.Info().Dur("interval", cm.canaryConfig.ReconcileInterval).Msg("Running reconciliation loop")
 	ticker := time.NewTicker(cm.canaryConfig.ReconcileInterval)
