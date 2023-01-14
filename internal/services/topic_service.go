@@ -127,7 +127,6 @@ func (s topicService) Reconcile() (TopicReconcileResult, error) {
 	topic, err := s.admin.GetTopic(ctx, s.canaryConfig.Topic, false)
 
 	// If cant describe we can't proceed
-	// TODO: Replace with error describing topic
 	if err != nil {
 		labels := prometheus.Labels{
 			"topic": s.canaryConfig.Topic,
