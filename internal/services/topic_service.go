@@ -13,36 +13,36 @@ import (
 )
 
 var (
-	cleanupPolicy     string = "delete"
-	metrics_namespace        = "kafka_canary"
+	cleanupPolicy    string = "delete"
+	metricsNamespace        = "kafka_canary"
 
 	topicCreationFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "topic_creation_failed_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Total number of errors while creating the canary topic",
 	}, []string{"topic"})
 
-	describeClusterError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "topic_describe_cluster_error_total",
-		Namespace: metrics_namespace,
-		Help:      "Total number of errors while describing cluster",
-	}, nil)
+	// describeClusterError = promauto.NewCounterVec(prometheus.CounterOpts{
+	// 	Name:      "topic_describe_cluster_error_total",
+	// 	Namespace: metricsNamespace,
+	// 	Help:      "Total number of errors while describing cluster",
+	// }, nil)
 
 	describeTopicError = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "topic_describe_error_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Total number of errors while getting canary topic metadata",
 	}, []string{"topic"})
 
-	alterTopicAssignmentsError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "topic_alter_assignments_error_total",
-		Namespace: metrics_namespace,
-		Help:      "Total number of errors while altering partitions assignments for the canary topic",
-	}, []string{"topic"})
+	// alterTopicAssignmentsError = promauto.NewCounterVec(prometheus.CounterOpts{
+	// 	Name:      "topic_alter_assignments_error_total",
+	// 	Namespace: metricsNamespace,
+	// 	Help:      "Total number of errors while altering partitions assignments for the canary topic",
+	// }, []string{"topic"})
 
 	alterTopicConfigurationError = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "topic_alter_configuration_error_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Total number of errors while altering configuration for the canary topic",
 	}, []string{"topic"})
 )
@@ -74,7 +74,7 @@ func NewTopicService(canaryConfig canary.Config, connectorConfig client.Connecto
 	}
 }
 
-func (s topicService) Reconcile() (TopicReconcileResult, error) {
+func (s *topicService) Reconcile() (TopicReconcileResult, error) {
 	result := TopicReconcileResult{}
 
 	ctx := context.Background()
@@ -110,7 +110,7 @@ func (s topicService) Reconcile() (TopicReconcileResult, error) {
 			ReplicationFactor: 3,
 			// ReplicaAssignments: assignment,
 			ConfigEntries: []kafka.ConfigEntry{
-				{ConfigName: "cleanup.policy", ConfigValue: "delete"},
+				{ConfigName: "cleanup.policy", ConfigValue: cleanupPolicy},
 				{ConfigName: "min.insync.replicas", ConfigValue: strconv.Itoa(3)}, // TODO: Get broker count from Kafka
 			},
 		})
@@ -166,34 +166,33 @@ func (s topicService) Close() {
 	if err := s.admin.Close(); err != nil {
 		s.logger.Fatal().Err(err).Msg("Error closing cluster admin")
 	}
-	s.admin = nil
 }
 
-func (s *topicService) requestAssignments() {
-	// TODO: Implement
-	// brokers, err := s.admin.GetBrokerIDs(ctx)
-	// if err != nil {
-	// 	s.logger.Fatal().Err(err).Msg("Error getting broker information")
-	// }
-	//
-	// brokersNumber := len(brokers)
-	// partitions := max(currentPartitions, brokersNumber)
-	// replicationFactor := min(brokersNumber, 3)
-	// minISR := max(1, replicationFactor-1)
-	//
-	// assignments := kafka.PartitionAssignment{}
-}
-
-func max(x, y int) int {
-	if x < y {
-		return y
-	}
-	return x
-}
-
-func min(x, y int) int {
-	if x > y {
-		return y
-	}
-	return x
-}
+// TODO: Implement
+// func (s *topicService) requestAssignments() {
+// 	brokers, err := s.admin.GetBrokerIDs(ctx)
+// 	if err != nil {
+// 		s.logger.Fatal().Err(err).Msg("Error getting broker information")
+// 	}
+//
+// 	brokersNumber := len(brokers)
+// 	partitions := max(currentPartitions, brokersNumber)
+// 	replicationFactor := min(brokersNumber, 3)
+// 	minISR := max(1, replicationFactor-1)
+//
+// 	assignments := kafka.PartitionAssignment{}
+// }
+//
+// func max(x, y int) int {
+// 	if x < y {
+// 		return y
+// 	}
+// 	return x
+// }
+//
+// func min(x, y int) int {
+// 	if x > y {
+// 		return y
+// 	}
+// 	return x
+// }

@@ -19,7 +19,7 @@ func NewCanaryMessage(bytes []byte) CanaryMessage {
 	return cm
 }
 
-func (cm CanaryMessage) Json() string {
+func (cm CanaryMessage) JSON() string {
 	json, _ := json.Marshal(cm)
 	return string(json)
 }

@@ -106,7 +106,7 @@ func (s *Server) startServer() *http.Server {
 func (s *Server) startMetricsServer() {
 	mux := http.DefaultServeMux
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})

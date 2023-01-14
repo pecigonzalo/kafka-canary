@@ -112,7 +112,7 @@ func TestBrokerClientUpdateTopicConfig(t *testing.T) {
 	)
 	require.NoError(t, err)
 	util.RetryUntil(t, 5*time.Second, func() error {
-		_, err := client.GetTopic(ctx, topicName, true)
+		_, err = client.GetTopic(ctx, topicName, true)
 		return err
 	})
 
@@ -355,7 +355,7 @@ func TestBrokerClientAddPartitions(t *testing.T) {
 	)
 	require.NoError(t, err)
 	util.RetryUntil(t, 5*time.Second, func() error {
-		_, err := client.GetTopic(ctx, topicName, true)
+		_, err = client.GetTopic(ctx, topicName, true)
 		return err
 	})
 
@@ -438,7 +438,7 @@ func TestBrokerClientAlterAssignments(t *testing.T) {
 	)
 	require.NoError(t, err)
 	util.RetryUntil(t, 5*time.Second, func() error {
-		_, err := client.GetTopic(ctx, topicName, true)
+		_, err = client.GetTopic(ctx, topicName, true)
 		return err
 	})
 
@@ -518,7 +518,7 @@ func TestBrokerClientRunLeaderElection(t *testing.T) {
 	require.NoError(t, err)
 
 	util.RetryUntil(t, 5*time.Second, func() error {
-		_, err := client.GetTopic(ctx, topicName, true)
+		_, err = client.GetTopic(ctx, topicName, true)
 		return err
 	})
 

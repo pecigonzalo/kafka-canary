@@ -105,7 +105,7 @@ func NewConnector(config ConnectorConfig) (*Connector, error) {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("Unrecognized SASL mechanism: %s", config.SASL.Mechanism)
+			return nil, fmt.Errorf("unrecognized SASL mechanism: %s", config.SASL.Mechanism)
 		}
 	}
 
@@ -131,7 +131,7 @@ func NewConnector(config ConnectorConfig) (*Connector, error) {
 			}
 			if ok := caCertPool.AppendCertsFromPEM(caCertContents); !ok {
 				return nil, fmt.Errorf(
-					"Could not append CA certs from %s",
+					"could not append CA certs from %s",
 					config.TLS.CACertPath,
 				)
 			}

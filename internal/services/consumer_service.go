@@ -14,44 +14,29 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-const (
-	// timeout on waiting the consumer to join the consumer group successfully
-	waitConsumeTimeout = 30 * time.Second
-	// maximum number of attempts for consumer to join the consumer group successfully
-	maxConsumeAttempts = 3
-	// delay to wait after a consume error (i.e. due to a broker offline, leader election, ...)
-	consumeDelay = 2 * time.Second
-)
-
 var (
 	RecordsConsumedCounter uint64 = 0
 
 	recordsConsumed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "records_consumed_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "The total number of records consumed",
 	}, []string{"clientid", "partition"})
 
 	recordsConsumerFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "consumer_error_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Total number of errors reported by the consumer",
 	}, []string{"clientid"})
 
 	// it's defined when the service is created because buckets are configurable
 	recordsEndToEndLatency *prometheus.HistogramVec
 
-	timeoutJoinGroup = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "consumer_timeout_join_group_total",
-		Namespace: metrics_namespace,
-		Help:      "The total number of consumers not joining the group within the timeout",
-	}, []string{"clientid"})
-
-	refreshConsumerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "consumer_refresh_metadata_error_total",
-		Namespace: metrics_namespace,
-		Help:      "Total number of errors while refreshing consumer metadata",
-	}, []string{"clientid"})
+	// refreshConsumerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
+	// 	Name:      "consumer_refresh_metadata_error_total",
+	// 	Namespace: metricsNamespace,
+	// 	Help:      "Total number of errors while refreshing consumer metadata",
+	// }, []string{"clientid"})
 )
 
 type consumerService struct {
@@ -68,7 +53,7 @@ type consumerService struct {
 func NewConsumerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ConsumerService {
 	recordsEndToEndLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:      "records_consumed_latency",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Records end-to-end latency in milliseconds",
 		Buckets:   canaryConfig.EndToEndLatencyBuckets,
 	}, []string{"clientid", "partition"})

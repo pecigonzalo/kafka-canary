@@ -9,8 +9,6 @@ import (
 
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/services"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 )
 
@@ -34,11 +32,11 @@ type CanaryManager struct {
 }
 
 var (
-	expectedClusterSizeError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "expected_cluster_size_error_total",
-		Namespace: "strimzi_canary",
-		Help:      "Total number of errors while waiting the Kafka cluster having the expected size",
-	}, nil)
+//	expectedClusterSizeError = promauto.NewCounterVec(prometheus.CounterOpts{
+//		Name:      "expected_cluster_size_error_total",
+//		Namespace: "strimzi_canary",
+//		Help:      "Total number of errors while waiting the Kafka cluster having the expected size",
+//	}, nil)
 )
 
 // NewCanaryManager returns an instance of the cananry manager worker

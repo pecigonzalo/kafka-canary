@@ -385,7 +385,7 @@ func (p PartitionInfo) Racks(brokerRacks map[int]string) ([]string, error) {
 	for _, brokerID := range p.Replicas {
 		rack, ok := brokerRacks[brokerID]
 		if !ok {
-			return nil, fmt.Errorf("Unrecognized broker ID: %d", brokerID)
+			return nil, fmt.Errorf("unrecognized broker ID: %d", brokerID)
 		}
 
 		racks = append(racks, rack)
@@ -401,7 +401,7 @@ func (p PartitionInfo) NumRacks(brokerRacks map[int]string) (int, error) {
 	for _, brokerID := range p.Replicas {
 		rack, ok := brokerRacks[brokerID]
 		if !ok {
-			return 0, fmt.Errorf("Unrecognized broker ID: %d", brokerID)
+			return 0, fmt.Errorf("unrecognized broker ID: %d", brokerID)
 		}
 
 		racksMap[rack] = struct{}{}
@@ -490,7 +490,7 @@ func (a PartitionAssignment) DistinctRacks(
 // if something is obviously wrong.
 func CheckAssignments(assignments []PartitionAssignment) error {
 	if len(assignments) == 0 {
-		return errors.New("Got zero-length slice")
+		return errors.New("got zero-length slice")
 	}
 
 	var minReplicas, maxReplicas int
@@ -511,12 +511,12 @@ func CheckAssignments(assignments []PartitionAssignment) error {
 		}
 
 		if a != assignment.ID {
-			return errors.New("Slice elements not in order")
+			return errors.New("slice elements not in order")
 		}
 
 		if hasRepeats(assignment) {
 			return fmt.Errorf(
-				"Found repeated partition in assignment: %+v",
+				"found repeated partition in assignment: %+v",
 				assignment,
 			)
 		}
@@ -524,7 +524,7 @@ func CheckAssignments(assignments []PartitionAssignment) error {
 
 	if minReplicas != maxReplicas {
 		return fmt.Errorf(
-			"Partition replicas do not have consistent length (min: %d, max: %d)",
+			"partition replicas do not have consistent length (min: %d, max: %d)",
 			minReplicas,
 			maxReplicas,
 		)
@@ -574,7 +574,7 @@ func AssignmentsToReplicas(assignments []PartitionAssignment) ([][]int, error) {
 
 	for a, assignment := range assignments {
 		if a != assignment.ID {
-			return nil, errors.New("Assignments are not in order")
+			return nil, errors.New("assignments are not in order")
 		}
 
 		replicaSlices = append(

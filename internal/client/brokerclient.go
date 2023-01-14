@@ -32,7 +32,7 @@ const (
 var (
 	// ErrTopicDoesNotExist is returned by admin functions when a topic that should exist
 	// does not.
-	ErrTopicDoesNotExist = errors.New("Topic does not exist")
+	ErrTopicDoesNotExist = errors.New("topic does not exist")
 )
 
 // BrokerAdminClient is a Client implementation that only uses broker APIs, without any
@@ -90,7 +90,7 @@ func NewBrokerAdminClient(
 	} else {
 		// Don't let users create client without basic read functionality.
 		return nil, errors.New(
-			"Kafka version too limited to support basic broker admin functionality; please use zk-based client.",
+			"kafka version too limited to support basic broker admin functionality",
 		)
 	}
 
@@ -390,7 +390,7 @@ func (c *BrokerAdminClient) UpdateTopicConfig(
 	overwrite bool,
 ) ([]string, error) {
 	if c.config.ReadOnly {
-		return nil, errors.New("Cannot update topic config read-only mode")
+		return nil, errors.New("cannot update topic config read-only mode")
 	}
 
 	req := kafka.IncrementalAlterConfigsRequest{
@@ -431,7 +431,7 @@ func (c *BrokerAdminClient) UpdateBrokerConfig(
 	overwrite bool,
 ) ([]string, error) {
 	if c.config.ReadOnly {
-		return nil, errors.New("Cannot update broker config read-only mode")
+		return nil, errors.New("cannot update broker config read-only mode")
 	}
 
 	req := kafka.IncrementalAlterConfigsRequest{
@@ -480,7 +480,7 @@ func KafkaErrorsToErr(errors map[string]error) error {
 		}
 	}
 	if hasErrors {
-		return fmt.Errorf("Kafka errors: %w", &ResponseErrors{
+		return fmt.Errorf("kafka errors: %w", &ResponseErrors{
 			ResponseErrors: errors,
 		})
 	}
@@ -502,25 +502,13 @@ func IncrementalAlterConfigsResponseResourcesError(resources []kafka.Incremental
 	return nil
 }
 
-func ResponseErrorsIs(err error, resp *ResponseErrors) error {
-	var responseErrors *ResponseErrors
-	if errors.As(err, &resp) {
-		for _, e := range responseErrors.ResponseErrors {
-			if errors.Is(e, err) {
-				return e
-			}
-		}
-	}
-	return nil
-}
-
 // CreateTopic creates a topic in the cluster.
 func (c *BrokerAdminClient) CreateTopic(
 	ctx context.Context,
 	config kafka.TopicConfig,
 ) error {
 	if c.config.ReadOnly {
-		return errors.New("Cannot create topic in read-only mode")
+		return errors.New("cannot create topic in read-only mode")
 	}
 
 	req := kafka.CreateTopicsRequest{
@@ -547,7 +535,7 @@ func (c *BrokerAdminClient) AssignPartitions(
 	assignments []PartitionAssignment,
 ) error {
 	if c.config.ReadOnly {
-		return errors.New("Cannot assign partitions in read-only mode")
+		return errors.New("cannot assign partitions in read-only mode")
 	}
 
 	apiAssignments := []kafka.AlterPartitionReassignmentsRequestAssignment{}
@@ -585,7 +573,7 @@ func (c *BrokerAdminClient) AddPartitions(
 	newAssignments []PartitionAssignment,
 ) error {
 	if c.config.ReadOnly {
-		return errors.New("Cannot add partitions in read-only mode")
+		return errors.New("cannot add partitions in read-only mode")
 	}
 
 	topicInfo, err := c.GetTopic(ctx, topic, false)
@@ -639,7 +627,7 @@ func (c *BrokerAdminClient) RunLeaderElection(
 	partitions []int,
 ) error {
 	if c.config.ReadOnly {
-		return errors.New("Cannot run leader election in read-only mode")
+		return errors.New("cannot run leader election in read-only mode")
 	}
 
 	req := kafka.ElectLeadersRequest{

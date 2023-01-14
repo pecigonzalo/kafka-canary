@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
@@ -27,8 +26,6 @@ type statusService struct {
 	canaryConfig           *canary.Config
 	producedRecordsSamples util.TimeWindowRing
 	consumedRecordsSamples util.TimeWindowRing
-	stop                   chan struct{}
-	syncStop               sync.WaitGroup
 	logger                 *zerolog.Logger
 }
 
@@ -42,7 +39,7 @@ func NewStatusServiceService(canary canary.Config, logger *zerolog.Logger) Statu
 func (s *statusService) Open()  {}
 func (s *statusService) Close() {}
 func (s *statusService) StatusHandler() http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		status := Status{}
 
 		// update consuming related status section

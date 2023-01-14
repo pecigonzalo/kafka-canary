@@ -18,24 +18,24 @@ var (
 
 	recordsProduced = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "records_produced_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "The total number of records produced",
 	}, []string{"clientid", "partition"})
 
 	recordsProducedFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "records_produced_failed_total",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "The total number of records failed to produce",
 	}, []string{"clientid", "partition"})
 
 	// it's defined when the service is created because buckets are configurable
 	recordsProducedLatency *prometheus.HistogramVec
 
-	refreshProducerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "producer_refresh_metadata_error_total",
-		Namespace: metrics_namespace,
-		Help:      "Total number of errors while refreshing producer metadata",
-	}, []string{"clientid"})
+	// refreshProducerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
+	// 	Name:      "producer_refresh_metadata_error_total",
+	// 	Namespace: metricsNamespace,
+	// 	Help:      "Total number of errors while refreshing producer metadata",
+	// }, []string{"clientid"})
 )
 
 type producerService struct {
@@ -51,7 +51,7 @@ type producerService struct {
 func NewProducerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ProducerService {
 	recordsProducedLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:      "records_produced_latency",
-		Namespace: metrics_namespace,
+		Namespace: metricsNamespace,
 		Help:      "Records produced latency in milliseconds",
 		Buckets:   canaryConfig.ProducerLatencyBuckets,
 	}, []string{"clientid", "partition"})
@@ -84,7 +84,7 @@ func (s *producerService) Send(partitionAssignments []int) {
 		value := s.newCanaryMessage()
 		msg := kafka.Message{
 			Partition: i,
-			Value:     []byte(value.Json()),
+			Value:     []byte(value.JSON()),
 		}
 		s.logger.Info().
 			Str("value", value.String()).

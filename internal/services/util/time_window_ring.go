@@ -1,9 +1,3 @@
-//
-// Copyright Strimzi authors.
-// License: Apache License 2.0 (see the file LICENSE or http://apache.org/licenses/LICENSE-2.0.html).
-//
-
-// Package util contains some utility functions
 package util
 
 import (
@@ -48,7 +42,6 @@ func (e *ErrNoDataSamples) Error() string {
 // ---------------------------------------------------------
 // | vX+1 (H) | v2 (T) | v3 | .... | vN | vN+1 | vN+2 | vX |  --> start to fill the buffer using first localion kicking out old value (time window is moving)
 // ---------------------------------------------------------
-//
 type TimeWindowRing struct {
 	buffer   []uint64
 	tail     int
