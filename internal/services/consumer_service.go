@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/internal/canary"
-	"github.com/pecigonzalo/kafka-canary/internal/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/kafka-go"
+
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/client"
 )
 
 var (
@@ -40,8 +41,8 @@ var (
 )
 
 type consumerService struct {
-	client          client.BrokerAdminClient
-	consumer        kafka.Reader
+	client          *client.BrokerAdminClient
+	consumer        *kafka.Reader
 	canaryConfig    *canary.Config
 	connectorConfig client.ConnectorConfig
 	// reference to the function for cancelling the Sarama consumer group context
@@ -80,8 +81,8 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 	logger.Info().Msg("Created consumer service reader")
 
 	return &consumerService{
-		client:          *client,
-		consumer:        *consumer,
+		client:          client,
+		consumer:        consumer,
 		canaryConfig:    &canaryConfig,
 		connectorConfig: connectorConfig,
 		logger:          logger,
@@ -123,7 +124,12 @@ func (s *consumerService) Consume() {
 				s.logger.Info().Msg("Consumer Groups context cancelled")
 				return
 			}
-			canaryMessage := NewCanaryMessage(message.Value)
+			canaryMessage, err := NewCanaryMessage(message.Value)
+			if err != nil {
+				s.logger.Err(err).Msg("Error creating new canary message")
+				return
+			}
+
 			timestamp := time.Now().UnixMilli()
 			duration := timestamp - canaryMessage.Timestamp
 			labels := prometheus.Labels{

@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/services"
-	"github.com/rs/zerolog"
 )
 
 // Worker interface exposing main operations on canary workers

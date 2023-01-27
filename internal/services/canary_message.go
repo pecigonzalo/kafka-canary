@@ -13,10 +13,10 @@ type CanaryMessage struct {
 	Timestamp  int64  `json:"timestamp"`
 }
 
-func NewCanaryMessage(bytes []byte) CanaryMessage {
+func NewCanaryMessage(bytes []byte) (CanaryMessage, error) {
 	var cm CanaryMessage
-	json.Unmarshal(bytes, &cm)
-	return cm
+	err := json.Unmarshal(bytes, &cm)
+	return cm, err
 }
 
 func (cm CanaryMessage) JSON() string {

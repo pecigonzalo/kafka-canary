@@ -6,8 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/internal/workers"
 	"github.com/rs/zerolog"
+
+	"github.com/pecigonzalo/kafka-canary/internal/workers"
 )
 
 type Shutdown struct {

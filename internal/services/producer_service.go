@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pecigonzalo/kafka-canary/internal/canary"
-	"github.com/pecigonzalo/kafka-canary/internal/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/kafka-go"
+
+	"github.com/pecigonzalo/kafka-canary/internal/canary"
+	"github.com/pecigonzalo/kafka-canary/internal/client"
 )
 
 var (
@@ -39,8 +40,8 @@ var (
 )
 
 type producerService struct {
-	client          client.Connector
-	producer        kafka.Writer
+	client          *client.Connector
+	producer        *kafka.Writer
 	canaryConfig    *canary.Config
 	connectorConfig client.ConnectorConfig
 	logger          *zerolog.Logger
@@ -70,8 +71,8 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 	logger.Info().Msg("Created producer service writer")
 
 	return &producerService{
-		client:          *client,
-		producer:        *producer,
+		client:          client,
+		producer:        producer,
 		canaryConfig:    &canaryConfig,
 		connectorConfig: connectorConfig,
 		logger:          logger,

@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/services/util"
-	"github.com/rs/zerolog"
 )
 
 // Status defines useful status related information
@@ -54,9 +55,17 @@ func (s *statusService) StatusHandler() http.Handler {
 			status.Consuming.Percentage = consumedPercentage
 		}
 
-		json, _ := json.Marshal(status)
+		json, err := json.Marshal(status)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("Marshal status")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		rw.Header().Add("Content-Type", "application/json")
-		rw.Write(json)
+		_, err = rw.Write(json)
+		if err != nil {
+			s.logger.Err(err).Msg("Write response")
+		}
 	})
 }
 

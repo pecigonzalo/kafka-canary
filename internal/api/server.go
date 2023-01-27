@@ -108,7 +108,10 @@ func (s *Server) startMetricsServer() {
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, err := w.Write([]byte("OK"))
+		if err != nil {
+			s.logger.Err(err).Msg("Write error")
+		}
 	})
 
 	srv := &http.Server{
@@ -116,7 +119,10 @@ func (s *Server) startMetricsServer() {
 		Handler: mux,
 	}
 
-	srv.ListenAndServe()
+	err := srv.ListenAndServe()
+	if err != nil {
+		s.logger.Err(err).Msg("Metrics server error")
+	}
 }
 
 func (s *Server) healthzHandler(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +152,10 @@ func (s *Server) JSONResponse(w http.ResponseWriter, r *http.Request, result int
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
-	w.Write(prettyJSON(body))
+	_, err = w.Write(prettyJSON(body))
+	if err != nil {
+		s.logger.Err(err).Msg("Write error")
+	}
 }
 
 func (s *Server) JSONResponseCode(w http.ResponseWriter, r *http.Request, result interface{}, responseCode int) {
@@ -160,11 +169,14 @@ func (s *Server) JSONResponseCode(w http.ResponseWriter, r *http.Request, result
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(responseCode)
-	w.Write(prettyJSON(body))
+	_, err = w.Write(prettyJSON(body))
+	if err != nil {
+		s.logger.Err(err).Msg("Write error")
+	}
 }
 
 func prettyJSON(b []byte) []byte {
 	var out bytes.Buffer
-	json.Indent(&out, b, "", "  ")
+	json.Indent(&out, b, "", "  ") // nolint: errcheck
 	return out.Bytes()
 }

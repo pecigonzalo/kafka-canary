@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
 	"github.com/pecigonzalo/kafka-canary/internal/api"
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/client"
 	"github.com/pecigonzalo/kafka-canary/internal/services"
 	"github.com/pecigonzalo/kafka-canary/internal/signals"
 	"github.com/pecigonzalo/kafka-canary/internal/workers"
-	"github.com/rs/zerolog"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -46,11 +47,14 @@ func main() {
 	// Bind flags and environment variables
 	viper.SetEnvPrefix("KAFKA_CANARY")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.BindPFlags(fs)
+	err := viper.BindPFlags(fs)
+	if err != nil {
+		panic(err.Error())
+	}
 	viper.AutomaticEnv()
 
 	// parse flags
-	err := fs.Parse(os.Args[1:])
+	err = fs.Parse(os.Args[1:])
 	switch {
 	case err == pflag.ErrHelp:
 		os.Exit(0)
