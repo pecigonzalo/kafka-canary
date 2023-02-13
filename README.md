@@ -15,10 +15,10 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
   - [ ] Topic activities
   - [ ] Producer
   - [ ] Consumer
-- [ ] Configuration
-  - [ ] Environment variables
-  - [ ] Configuration File
-  - [ ] Arguments
+- [x] Configuration
+  - [x] Environment variables
+  - [x] Configuration File
+  - [x] Arguments
 - [ ] Support files
   - [ ] Kuberentes deployment example
   - [ ] Helm chart
