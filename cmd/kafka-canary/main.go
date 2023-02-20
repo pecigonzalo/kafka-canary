@@ -33,16 +33,14 @@ type Config struct {
 }
 
 func main() {
-	loadConfigFile()
-	setupEnvVariables()
-
 	fs := setupFlags()
-
 	versionFlag := fs.BoolP("version", "v", false, "get version number")
 
+	parseConfigFile()
+	parseEnvVariables()
 	parseFlags(fs, versionFlag)
 
-	config := loadConfig()
+	config := unmarshalConfig()
 
 	logger := setupLogger(config)
 
@@ -73,8 +71,8 @@ func main() {
 
 	connectorConfig := client.ConnectorConfig{
 		BrokerAddrs: config.Kafka.BrokerAddrs,
-		TLS:         client.TLSConfig{Enabled: true},
-		SASL:        client.SASLConfig{Enabled: true, Mechanism: client.SASLMechanismAWSMSKIAM},
+		TLS:         config.Kafka.TLS,
+		SASL:        config.Kafka.SASL,
 	}
 
 	topicService := services.NewTopicService(config.Canary, connectorConfig, &logger)
@@ -97,8 +95,11 @@ func main() {
 func setupFlags() *pflag.FlagSet {
 	fs := pflag.NewFlagSet("default", pflag.ContinueOnError)
 	fs.String("host", "", "Host to bind service to")
+	viper.RegisterAlias("api.host", "host")
 	fs.Int("port", 9898, "HTTP port to bind service to")
+	viper.RegisterAlias("api.port", "port")
 	fs.StringSlice("brokers", []string{}, "Kafka broker address")
+	viper.RegisterAlias("kafka.broker-addrs", "brokers")
 	fs.String("output", "json", "Output target [console, json]")
 	fs.String("level", "info", "Log level [debug, info, warn, error, fatal, panic]")
 	fs.String("canary.topic", "__kafka_canary", "Name of the topic used by the canary")
@@ -127,7 +128,7 @@ func setupFlags() *pflag.FlagSet {
 	return fs
 }
 
-func loadConfigFile() {
+func parseConfigFile() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("/etc/kafka-canary")
@@ -139,7 +140,7 @@ func loadConfigFile() {
 	}
 }
 
-func setupEnvVariables() {
+func parseEnvVariables() {
 	viper.SetEnvPrefix("KAFKA_CANARY")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -193,7 +194,7 @@ func setupLogger(config Config) zerolog.Logger {
 	return logger
 }
 
-func loadConfig() Config {
+func unmarshalConfig() Config {
 	var config Config
 
 	if err := viper.Unmarshal(&config); err != nil {

@@ -30,7 +30,7 @@ const (
 
 // ConnectorConfig contains the configuration used to contruct a connector.
 type ConnectorConfig struct {
-	BrokerAddrs []string   `mapstructure:"brokers"`
+	BrokerAddrs []string   `mapstructure:"broker-addrs"`
 	TLS         TLSConfig  `mapstructure:"tls"`
 	SASL        SASLConfig `mapstructure:"sasl"`
 }
