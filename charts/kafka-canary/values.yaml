@@ -29,11 +29,12 @@ podSecurityContext: {}
 
 securityContext: {}
 
-env: {}
+env:
+  KAFKA_CANARY_LEVEL: debug
 
 service:
   type: ClusterIP
-  port: 8080
+  port: 9898
 
 resources: {}
 
@@ -42,3 +43,5 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+config: {}

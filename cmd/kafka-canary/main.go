@@ -128,8 +128,9 @@ func setupFlags() *pflag.FlagSet {
 }
 
 func loadConfigFile() {
-	viper.SetConfigName("kafka-canary")
-	viper.AddConfigPath("/etc/kafka-canary/")
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("/etc/kafka-canary")
 	viper.AddConfigPath(".")
 	if err := viper.ReadInConfig(); err != nil {
 		if err != err.(viper.ConfigFileNotFoundError) {

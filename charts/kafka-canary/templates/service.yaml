@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "kafka-canary.fullname" . }}
+  name: {{ include "kafka-canary.fullname" . }}-service # We need a suffix to avoid polluting the service env-vars
   labels:
     {{- include "kafka-canary.labels" . | nindent 4 }}
 spec:
