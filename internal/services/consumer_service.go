@@ -45,7 +45,7 @@ type consumerService struct {
 	consumer        *kafka.Reader
 	canaryConfig    *canary.Config
 	connectorConfig client.ConnectorConfig
-	// reference to the function for cancelling the Sarama consumer group context
+	// reference to the function for cancelling the consumer group context
 	// in order to ending the session and allowing a rejoin with rebalancing
 	cancel context.CancelFunc
 	logger *zerolog.Logger
@@ -89,9 +89,9 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 	}
 }
 
-func (s *consumerService) Consume() {
+func (s *consumerService) Consume(ctx context.Context) {
 	// creating new context with cancellation, for exiting Consume when metadata refresh is needed
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	s.cancel = cancel
 	go func() {
 		defer s.Close()
@@ -110,6 +110,9 @@ func (s *consumerService) Consume() {
 						err,
 					)
 					continue
+				} else if ctx.Err() != nil {
+					s.logger.Info().Str("topic", s.canaryConfig.Topic).Msg("Consumer context cancelled")
+					return
 				} else {
 					s.logger.Error().Err(err).Str("topic", s.canaryConfig.Topic).Msg("Error consuming topic")
 					labels := prometheus.Labels{
@@ -118,7 +121,6 @@ func (s *consumerService) Consume() {
 					recordsConsumerFailed.With(labels).Inc()
 				}
 			}
-			s.logger.Debug().Msg("Read canary message")
 
 			if ctx.Err() != nil {
 				s.logger.Info().Msg("Consumer Groups context cancelled")
@@ -144,7 +146,7 @@ func (s *consumerService) Consume() {
 				Int("partition", message.Partition).
 				Int64("offset", message.Offset).
 				Bytes("message", message.Value).
-				Msg("Read message")
+				Msg("Message read")
 		}
 	}()
 }

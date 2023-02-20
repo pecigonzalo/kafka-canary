@@ -79,7 +79,7 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 	}
 }
 
-func (s *producerService) Send(partitionAssignments []int) {
+func (s *producerService) Send(ctx context.Context, partitionAssignments []int) {
 	numPartitions := len(partitionAssignments)
 	for i := 0; i < numPartitions; i++ {
 		value := s.newCanaryMessage()
@@ -87,12 +87,12 @@ func (s *producerService) Send(partitionAssignments []int) {
 			Partition: i,
 			Value:     []byte(value.JSON()),
 		}
-		s.logger.Info().
+		s.logger.Debug().
 			Str("value", value.String()).
 			Int("partition", i).
 			Msgf("Sending message")
 
-		err := s.producer.WriteMessages(context.Background(), msg)
+		err := s.producer.WriteMessages(ctx, msg)
 		timestamp := time.Now().UnixMilli()
 		labels := prometheus.Labels{
 			"clientid":  s.canaryConfig.ClientID,

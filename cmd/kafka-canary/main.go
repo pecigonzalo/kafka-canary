@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -24,12 +24,12 @@ var (
 )
 
 type Config struct {
-	Host    string        `mapstructure:"host"`
-	Port    int           `mapstructure:"port"`
-	Level   string        `mapstructure:"level"`
-	Brokers []string      `mapstructure:"brokers"`
-	Canary  canary.Config `mapstructure:"canary"`
-	Output  string        `mapstructure:"output"`
+	Level           string                 `mapstructure:"level"`
+	Output          string                 `mapstructure:"output"`
+	ShutdownTimeout time.Duration          `mapstructure:"shutdown-timeout"`
+	Canary          canary.Config          `mapstructure:"canary"`
+	API             api.Config             `mapstructure:"api"`
+	Kafka           client.ConnectorConfig `mapstructure:"kafka"`
 }
 
 func main() {
@@ -46,21 +46,33 @@ func main() {
 
 	logger := setupLogger(config)
 
+	// Print config
+	logger.Debug().
+		Str("config", fmt.Sprintf("%+v", config)).
+		Msg("Configuration")
+
+	// Start context
+	ctx := context.Background()
+
 	// Start HTTP server
 	logger.Info().
-		Str("config", fmt.Sprintf("%+v", config)).
-		Str("config", fmt.Sprintf("%+v", config)).
 		Msg("Starting Kafka Canary")
-	srvCfg := api.Config{
-		Host:    config.Host,
-		Port:    strconv.Itoa(config.Port),
-		Service: "kafka-canary",
+
+	srvCfg := &api.Config{
+		Host:    config.API.Host,
+		Port:    config.API.Port,
+		Service: config.API.Service,
 	}
-	srv, _ := api.NewServer(&srvCfg, &logger)
+	srv, err := api.NewServer(srvCfg, &logger)
+	if err != nil {
+		logger.Fatal().
+			Err(err).
+			Msg("Error starting API service")
+	}
 	httpServer, healthy, ready := srv.ListenAndServe()
 
 	connectorConfig := client.ConnectorConfig{
-		BrokerAddrs: config.Brokers,
+		BrokerAddrs: config.Kafka.BrokerAddrs,
 		TLS:         client.TLSConfig{Enabled: true},
 		SASL:        client.SASLConfig{Enabled: true, Mechanism: client.SASLMechanismAWSMSKIAM},
 	}
@@ -73,11 +85,11 @@ func main() {
 
 	// start canary manager
 	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, connectionService, statusService, &logger)
-	canaryManager.Start()
+	canaryManager.Start(ctx)
 
 	// graceful shutdown
 	stopCh := signals.SetupSignalHandler()
-	serverShutdownTimeout := 5 * time.Second
+	serverShutdownTimeout := config.ShutdownTimeout
 	sd, _ := signals.NewShutdown(serverShutdownTimeout, &logger)
 	sd.Graceful(stopCh, httpServer, canaryManager, healthy, ready)
 }

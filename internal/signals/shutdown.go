@@ -55,5 +55,4 @@ func (s *Shutdown) Graceful(stopCh <-chan struct{}, httpServer *http.Server, can
 			s.logger.Error().Err(err).Msg("HTTP server graceful shutdown failed")
 		}
 	}
-
 }

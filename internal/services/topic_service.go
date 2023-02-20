@@ -75,10 +75,8 @@ func NewTopicService(canaryConfig canary.Config, connectorConfig client.Connecto
 	}
 }
 
-func (s *topicService) Reconcile() (TopicReconcileResult, error) {
+func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, error) {
 	result := TopicReconcileResult{}
-
-	ctx := context.Background()
 
 	if s.admin == nil {
 		a, err := client.NewBrokerAdminClient(ctx,

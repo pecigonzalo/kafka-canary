@@ -24,18 +24,18 @@ type ConnectionService interface {
 }
 
 type TopicService interface {
-	Reconcile() (TopicReconcileResult, error)
+	Reconcile(context.Context) (TopicReconcileResult, error)
 	Close()
 }
 
 type ProducerService interface {
-	Send(partitionsAssignments []int)
+	Send(context.Context, []int)
 	Refresh()
 	Close()
 }
 
 type ConsumerService interface {
-	Consume()
+	Consume(context.Context)
 	Refresh()
 	Leaders(context.Context) (map[int]int, error)
 	Close()

@@ -15,7 +15,7 @@ import (
 
 // Worker interface exposing main operations on canary workers
 type Worker interface {
-	Start()
+	Start(ctx context.Context)
 	Stop()
 }
 
@@ -58,7 +58,7 @@ func NewCanaryManager(canaryConfig canary.Config,
 }
 
 // Start runs a first reconcile and start a timer for periodic reconciling
-func (cm *CanaryManager) Start() {
+func (cm *CanaryManager) Start(ctx context.Context) {
 	cm.logger.Info().Msg("Starting canary manager")
 
 	cm.stop = make(chan struct{})
@@ -67,15 +67,15 @@ func (cm *CanaryManager) Start() {
 	cm.connectionService.Open()
 	cm.statusService.Open()
 
-	result, err := cm.topicService.Reconcile()
+	result, err := cm.topicService.Reconcile(ctx)
 	if err != nil {
 		cm.logger.Fatal().Err(err).Msg("Error starting canary manager")
 	}
 	cm.logger.Info().Msg("Consume and produce")
 	// consumer will subscribe to the topic so all partitions (even if we have less brokers)
-	cm.consumerService.Consume()
+	cm.consumerService.Consume(ctx)
 	// producer has to send to partitions assigned to brokers
-	cm.producerService.Send(result.Assignments)
+	cm.producerService.Send(ctx, result.Assignments)
 
 	cm.logger.Info().Dur("interval", cm.canaryConfig.ReconcileInterval).Msg("Running reconciliation loop")
 	ticker := time.NewTicker(cm.canaryConfig.ReconcileInterval)
@@ -83,7 +83,7 @@ func (cm *CanaryManager) Start() {
 		for {
 			select {
 			case <-ticker.C:
-				cm.reconcile()
+				cm.reconcile(ctx)
 			case <-cm.stop:
 				ticker.Stop()
 				defer cm.syncStop.Done()
@@ -111,19 +111,19 @@ func (cm *CanaryManager) Stop() {
 	cm.logger.Info().Msg("Canary manager closed")
 }
 
-func (cm *CanaryManager) reconcile() {
+func (cm *CanaryManager) reconcile(ctx context.Context) {
 	cm.logger.Info().Msg("Canary manager reconcile")
 
-	if result, err := cm.topicService.Reconcile(); err == nil {
+	if result, err := cm.topicService.Reconcile(ctx); err == nil {
 		if result.RefreshProducerMetadata {
 			cm.producerService.Refresh()
 		}
 
-		leaders, err := cm.consumerService.Leaders(context.Background())
+		leaders, err := cm.consumerService.Leaders(ctx)
 		if err != nil || !reflect.DeepEqual(result.Leaders, leaders) {
 			cm.consumerService.Refresh()
 		}
 		// producer has to send to partitions assigned to brokers
-		cm.producerService.Send(result.Assignments)
+		cm.producerService.Send(ctx, result.Assignments)
 	}
 }

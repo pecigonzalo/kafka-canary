@@ -80,7 +80,7 @@ func (s *Server) ListenAndServe() (*http.Server, *int32, *int32) {
 
 func (s *Server) startServer() *http.Server {
 	srv := &http.Server{
-		Addr:         s.config.Host + ":" + s.config.Port,
+		Addr:         fmt.Sprintf("%s:%d", s.config.Host, s.config.Port),
 		WriteTimeout: 30 * time.Second,
 		ReadTimeout:  30 * time.Second,
 		IdleTimeout:  2 * 30 * time.Second,
