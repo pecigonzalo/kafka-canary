@@ -95,11 +95,8 @@ func main() {
 func setupFlags() *pflag.FlagSet {
 	fs := pflag.NewFlagSet("default", pflag.ContinueOnError)
 	fs.String("host", "", "Host to bind service to")
-	viper.RegisterAlias("api.host", "host")
 	fs.Int("port", 9898, "HTTP port to bind service to")
-	viper.RegisterAlias("api.port", "port")
 	fs.StringSlice("brokers", []string{}, "Kafka broker address")
-	viper.RegisterAlias("kafka.broker-addrs", "brokers")
 	fs.String("output", "json", "Output target [console, json]")
 	fs.String("level", "info", "Log level [debug, info, warn, error, fatal, panic]")
 	fs.String("canary.topic", "__kafka_canary", "Name of the topic used by the canary")
@@ -119,11 +116,6 @@ func setupFlags() *pflag.FlagSet {
 	fs.Duration("canary.status-check-interval", 30*time.Second, "Status check interval")
 	fs.Int("canary.bootstrap-backoff-max-attempts", 10, "Bootstrap backoff max attempts")
 	fs.Duration("canary.bootstrap-backoff-scale", 5*time.Second, "Bootstrap backoff scale")
-
-	err := viper.BindPFlags(fs)
-	if err != nil {
-		exitError(err, 2, "Failed to bind flags to viper")
-	}
 
 	return fs
 }
@@ -160,16 +152,22 @@ func parseFlags(fs *pflag.FlagSet, versionFlag *bool) {
 		os.Exit(0)
 	}
 
-	fs.VisitAll(func(f *pflag.Flag) {
-		configName := f.Name
-		if !f.Changed && viper.IsSet(configName) {
-			val := viper.Get(configName)
-			err = fs.Set(f.Name, fmt.Sprintf("%v", val))
-			if err != nil {
-				exitError(err, 2, "Set flag error")
-			}
-		}
-	})
+	err = viper.BindPFlags(fs)
+	// Bind flags with different names
+	// NOTE: There must be a cleaner way of doing this
+	// using RegisterAlias does not fully work for nested fields
+	if err := viper.BindPFlag("api.port", fs.Lookup("port")); err != nil {
+		exitError(err, 2, "Failed to bind flags to viper")
+	}
+	if err := viper.BindPFlag("api.host", fs.Lookup("host")); err != nil {
+		exitError(err, 2, "Failed to bind flags to viper")
+	}
+	if err := viper.BindPFlag("kafka.broker-addrs", fs.Lookup("brokers")); err != nil {
+		exitError(err, 2, "Failed to bind flags to viper")
+	}
+	if err != nil {
+		exitError(err, 2, "Failed to bind flags to viper")
+	}
 }
 
 func setupLogger(config Config) zerolog.Logger {
