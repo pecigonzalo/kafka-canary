@@ -40,6 +40,8 @@ jobs:
         with:
           images: |
             ghcr.io/pecigonzalo/kafka-canary
+          tags: |
+            type=semver,pattern={{version}}
 
       - name: Update Chart.yaml
         run: |

@@ -2,5 +2,5 @@ apiVersion: v2
 name: kafka-canary
 description: A Kafka Canary
 type: application
-version: 0.0.1
-appVersion: "local"
+version: 0.0.1 # This version is replaced on release
+appVersion: "0.0.1" # This version is replaced on release
