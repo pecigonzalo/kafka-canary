@@ -131,9 +131,10 @@ func loadConfigFile() {
 	viper.SetConfigName("kafka-canary")
 	viper.AddConfigPath("/etc/kafka-canary/")
 	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		exitError(err, 2, "Load config failed")
+	if err := viper.ReadInConfig(); err != nil {
+		if err != err.(viper.ConfigFileNotFoundError) {
+			exitError(err, 2, "Load config failed")
+		}
 	}
 }
 
