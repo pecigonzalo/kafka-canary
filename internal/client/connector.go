@@ -30,27 +30,27 @@ const (
 
 // ConnectorConfig contains the configuration used to contruct a connector.
 type ConnectorConfig struct {
-	BrokerAddrs []string
-	TLS         TLSConfig
-	SASL        SASLConfig
+	BrokerAddrs []string   `mapstructure:"brokers"`
+	TLS         TLSConfig  `mapstructure:"tls"`
+	SASL        SASLConfig `mapstructure:"sasl"`
 }
 
 // TLSConfig stores the TLS-related configuration for a connection.
 type TLSConfig struct {
-	Enabled    bool
-	CertPath   string
-	KeyPath    string
-	CACertPath string
-	ServerName string
-	SkipVerify bool
+	Enabled    bool   `mapstructure:"enabled"`
+	CertPath   string `mapstructure:"cert-path"`
+	KeyPath    string `mapstructure:"key-path"`
+	CACertPath string `mapstructure:"ca-cert-path"`
+	ServerName string `mapstructure:"server-name"`
+	SkipVerify bool   `mapstructure:"skip-verify"`
 }
 
 // SASLConfig stores the SASL-related configuration for a connection.
 type SASLConfig struct {
-	Enabled   bool
-	Mechanism SASLMechanism
-	Username  string
-	Password  string
+	Enabled   bool          `mapstructure:"enabled"`
+	Mechanism SASLMechanism `mapstructure:"mechanism"`
+	Username  string        `mapstructure:"username"`
+	Password  string        `mapstructure:"password"`
 }
 
 // Connector is a wrapper around the low-level, kafka-go dialer and client.
