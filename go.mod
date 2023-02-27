@@ -8,7 +8,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/zerolog v1.29.0
-	github.com/segmentio/kafka-go v0.4.38
+	github.com/segmentio/kafka-go v0.4.39
 	github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.0.0-20221118181021-eba9cae7fd57
 	github.com/segmentio/topicctl v1.8.0
 	github.com/spf13/pflag v1.0.5
