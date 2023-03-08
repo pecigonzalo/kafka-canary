@@ -179,9 +179,9 @@ func setupLogger(config Config) zerolog.Logger {
 
 	var logger zerolog.Logger
 	if config.Output == "console" {
-		logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr})
+		logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 	} else {
-		logger = zerolog.New(os.Stderr)
+		logger = zerolog.New(os.Stdout)
 	}
 	logger = logger.With().
 		Timestamp().
