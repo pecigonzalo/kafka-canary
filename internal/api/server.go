@@ -64,7 +64,7 @@ func (s *Server) ListenAndServe() (*http.Server, *int32, *int32) {
 			Int("status", status).
 			Int("size", size).
 			Dur("duration", duration).
-			Msg("")
+			Msg("HTTP Request")
 	}))
 	s.handler = chain.Then(s.router)
 
