@@ -90,7 +90,7 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 		s.logger.Debug().
 			Str("value", value.String()).
 			Int("partition", i).
-			Msgf("Sending message")
+			Msg("Sending message")
 
 		err := s.producer.WriteMessages(ctx, msg)
 		timestamp := time.Now().UnixMilli()
@@ -109,7 +109,7 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 			s.logger.Info().
 				Int("partition", i).
 				Int64("duration", duration).
-				Msgf("Message sent")
+				Msg("Message sent")
 			recordsProducedLatency.With(labels).Observe(float64(duration))
 		}
 	}
