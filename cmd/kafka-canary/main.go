@@ -152,20 +152,19 @@ func parseFlags(fs *pflag.FlagSet, versionFlag *bool) {
 		os.Exit(0)
 	}
 
-	err = viper.BindPFlags(fs)
+	if err = viper.BindPFlags(fs); err != nil {
+		exitError(err, 2, "Failed to bind flags to viper")
+	}
 	// Bind flags with different names
 	// NOTE: There must be a cleaner way of doing this
 	// using RegisterAlias does not fully work for nested fields
-	if err := viper.BindPFlag("api.port", fs.Lookup("port")); err != nil {
+	if err = viper.BindPFlag("api.port", fs.Lookup("port")); err != nil {
 		exitError(err, 2, "Failed to bind flags to viper")
 	}
-	if err := viper.BindPFlag("api.host", fs.Lookup("host")); err != nil {
+	if err = viper.BindPFlag("api.host", fs.Lookup("host")); err != nil {
 		exitError(err, 2, "Failed to bind flags to viper")
 	}
-	if err := viper.BindPFlag("kafka.broker-addrs", fs.Lookup("brokers")); err != nil {
-		exitError(err, 2, "Failed to bind flags to viper")
-	}
-	if err != nil {
+	if err = viper.BindPFlag("kafka.broker-addrs", fs.Lookup("brokers")); err != nil {
 		exitError(err, 2, "Failed to bind flags to viper")
 	}
 }
