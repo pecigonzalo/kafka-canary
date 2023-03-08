@@ -31,7 +31,7 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 ### Optional
 
 - [direnv](https://direnv.net/)
-- [Nix](https://nixos.org/) with [Flakes](https://nixos.wiki/wiki/Flakes) 
+- [Nix](https://nixos.org/) with [Flakes](https://nixos.wiki/wiki/Flakes)
 
 ## Thanks
 
