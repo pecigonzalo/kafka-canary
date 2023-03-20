@@ -74,8 +74,6 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Dialer:      client.GetConnector().Dialer,
 		GroupID:     canaryConfig.ConsumerGroupID,
 		Topic:       canaryConfig.Topic,
-		MinBytes:    10e3, // 10KB
-		MaxBytes:    10e6, // 10MB
 		StartOffset: kafka.LastOffset,
 	})
 	logger.Info().Msg("Created consumer service reader")
@@ -145,8 +143,15 @@ func (s *consumerService) Consume(ctx context.Context) {
 				Int64("duration", duration).
 				Int("partition", message.Partition).
 				Int64("offset", message.Offset).
-				Bytes("message", message.Value).
 				Msg("Message read")
+			if s.logger.Debug().Enabled() {
+				s.logger.Debug().
+					Int64("duration", duration).
+					Int("partition", message.Partition).
+					Int64("offset", message.Offset).
+					Bytes("value", message.Value).
+					Msg("Message content")
+			}
 		}
 	}()
 }
