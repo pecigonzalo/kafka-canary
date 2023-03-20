@@ -11,6 +11,8 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 
 ⚠️ In Progress⚠️
 
+- [ ] Behaviour tests
+- [ ] Integration tests
 - [x] Implement core monitors
   - [x] Topic activities
   - [x] Producer
