@@ -25,14 +25,11 @@ var (
 )
 
 type consumerService struct {
-	client          *client.BrokerAdminClient
+	client          *client.Connector
 	consumer        *kafka.Reader
 	canaryConfig    *canary.Config
-	connectorConfig client.ConnectorConfig
-	// reference to the function for cancelling the consumer group context
-	// in order to ending the session and allowing a rejoin with rebalancing
-	cancel context.CancelFunc
-	logger *zerolog.Logger
+	connectorConfig *client.ConnectorConfig
+	logger          *zerolog.Logger
 }
 
 func NewConsumerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ConsumerService {
@@ -48,7 +45,7 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Namespace:   metricsNamespace,
 		Help:        "Total number of errors reported by the consumer",
 		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
-	}, []string{})
+	}, nil)
 
 	recordsEndToEndLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:        "records_consumed_latency",
@@ -63,27 +60,24 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Namespace:   metricsNamespace,
 		Help:        "Total number of errors while refreshing consumer metadata",
 		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
-	}, []string{})
-
-	// NOTE: Shuold we get this context from the caller?
-	ctx := context.Background()
+	}, nil)
 
 	serviceLogger := logger.With().
+		Str("canaryService", "consumer").
 		Str("topic", canaryConfig.Topic).
 		Str("consumerGroup", canaryConfig.ConsumerGroupID).
 		Logger()
 
-	client, err := client.NewBrokerAdminClient(ctx, client.BrokerAdminClientConfig{
-		ConnectorConfig: connectorConfig,
-	}, &serviceLogger)
+	client, err := client.NewConnector(connectorConfig)
 	if err != nil {
 		serviceLogger.Fatal().Err(err).Msg("Error creating consumer service client")
 	}
+	client.Dialer.ClientID = canaryConfig.ClientID
 	serviceLogger.Info().Msg("Created consumer service client")
 
 	consumer := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     client.GetConnector().Config.BrokerAddrs,
-		Dialer:      client.GetConnector().Dialer,
+		Brokers:     client.Config.BrokerAddrs,
+		Dialer:      client.Dialer,
 		GroupID:     canaryConfig.ConsumerGroupID,
 		Topic:       canaryConfig.Topic,
 		StartOffset: kafka.LastOffset,
@@ -94,15 +88,12 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		client:          client,
 		consumer:        consumer,
 		canaryConfig:    &canaryConfig,
-		connectorConfig: connectorConfig,
+		connectorConfig: &connectorConfig,
 		logger:          &serviceLogger,
 	}
 }
 
 func (s *consumerService) Consume(ctx context.Context) {
-	// creating new context with cancellation, for exiting Consume when metadata refresh is needed
-	ctx, cancel := context.WithCancel(ctx)
-	s.cancel = cancel
 	go func() {
 		defer s.Close()
 		for {
@@ -121,7 +112,7 @@ func (s *consumerService) Consume(ctx context.Context) {
 					)
 					continue
 				} else if ctx.Err() != nil {
-					s.logger.Info().Msg("Consumer context cancelled")
+					s.logger.Info().Msg("Context cancelled")
 					return
 				} else {
 					s.logger.Error().Err(err).Msg("Error consuming topic")
@@ -165,43 +156,52 @@ func (s *consumerService) Consume(ctx context.Context) {
 }
 
 func (s *consumerService) Refresh(ctx context.Context) {
-	s.logger.Info().Msg("Consumer refreshing metadata")
-	resp, err := s.client.GetConnector().KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
-		Topics: []string{s.canaryConfig.Topic},
-	})
+	s.logger.Info().Msg("Refreshing metadata")
+	_, err := s.getMetadata(ctx)
 	if err != nil {
 		refreshConsumerMetadataError.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error freshing metadata in consumer")
-	}
-	for _, topic := range resp.Topics {
-		if topic.Error != nil {
-			refreshConsumerMetadataError.WithLabelValues().Inc()
-			s.logger.Error().Err(topic.Error).Msg("Error freshing metadata in consumer")
-		}
+		s.logger.Error().Err(err).Msg("Error refreshing metadata")
 	}
 }
 
 func (s *consumerService) Leaders(ctx context.Context) (map[int]int, error) {
-	topic, err := s.client.GetTopic(ctx, s.canaryConfig.Topic, false)
+	s.logger.Info().Msg("Getting leaders")
+	topic, err := s.getMetadata(ctx)
 	if err != nil {
-		return map[int]int{}, nil
+		s.logger.Err(err).Msg("Error getting leaders")
+		return nil, err
 	}
 
 	leaders := make(map[int]int, len(topic.Partitions))
 
 	for _, p := range topic.Partitions {
-		leaders[p.ID] = p.Leader
+		leaders[p.ID] = p.Leader.ID
 	}
 
 	return leaders, nil
 }
 
 func (s *consumerService) Close() {
-	s.logger.Info().Msg("Closing consumer")
-	s.cancel()
+	s.logger.Info().Msg("Service closing")
 	err := s.consumer.Close()
 	if err != nil {
-		s.logger.Fatal().Err(err).Msg("Error closing the kafka consumer")
+		s.logger.Fatal().Err(err).Msg("Error while closing")
 	}
-	s.logger.Info().Msg("Consumer closed")
+	s.logger.Info().Msg("Service closed")
+}
+
+func (s *consumerService) getMetadata(ctx context.Context) (kafka.Topic, error) {
+	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
+		Topics: []string{s.canaryConfig.Topic},
+	})
+	if err != nil {
+		return kafka.Topic{}, err
+	}
+
+	topic := resp.Topics[0]
+	if topic.Error != nil {
+		return kafka.Topic{}, err
+	}
+
+	return topic, nil
 }

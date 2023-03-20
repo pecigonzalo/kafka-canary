@@ -27,7 +27,7 @@ type producerService struct {
 	client          *client.Connector
 	producer        *kafka.Writer
 	canaryConfig    *canary.Config
-	connectorConfig client.ConnectorConfig
+	connectorConfig *client.ConnectorConfig
 	logger          *zerolog.Logger
 	// index of the next message to send
 	index int
@@ -61,9 +61,10 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Namespace:   metricsNamespace,
 		Help:        "Total number of errors while refreshing producer metadata",
 		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
-	}, []string{})
+	}, nil)
 
 	serviceLogger := logger.With().
+		Str("canaryService", "producer").
 		Str("topic", canaryConfig.Topic).
 		Str("clientId", canaryConfig.ClientID).
 		Logger()
@@ -75,7 +76,7 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 	serviceLogger.Info().Msg("Created producer service client")
 
 	producer := &kafka.Writer{
-		Addr:      kafka.TCP(connectorConfig.BrokerAddrs...),
+		Addr:      kafka.TCP(client.Config.BrokerAddrs...),
 		Transport: client.KafkaClient.Transport,
 		Topic:     canaryConfig.Topic,
 	}
@@ -85,7 +86,7 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 		client:          client,
 		producer:        producer,
 		canaryConfig:    &canaryConfig,
-		connectorConfig: connectorConfig,
+		connectorConfig: &connectorConfig,
 		logger:          &serviceLogger,
 	}
 }
@@ -125,18 +126,10 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 
 func (s *producerService) Refresh(ctx context.Context) {
 	s.logger.Info().Msg("Producer refreshing metadata")
-	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
-		Topics: []string{s.canaryConfig.Topic},
-	})
+	_, err := s.getMetadata(ctx)
 	if err != nil {
 		refreshProducerMetadataError.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error freshing metadata in producer")
-	}
-	for _, topic := range resp.Topics {
-		if topic.Error != nil {
-			refreshProducerMetadataError.WithLabelValues().Inc()
-			s.logger.Error().Err(topic.Error).Msg("Error freshing metadata in consumer")
-		}
+		s.logger.Error().Err(err).Msg("Error refreshing metadata")
 	}
 }
 
@@ -147,6 +140,22 @@ func (s *producerService) Close() {
 		s.logger.Fatal().Err(err).Msg("Error closing the kafka producer")
 	}
 	s.logger.Info().Msg("Producer closed")
+}
+
+func (s *producerService) getMetadata(ctx context.Context) (kafka.Topic, error) {
+	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
+		Topics: []string{s.canaryConfig.Topic},
+	})
+	if err != nil {
+		return kafka.Topic{}, err
+	}
+
+	topic := resp.Topics[0]
+	if topic.Error != nil {
+		return kafka.Topic{}, err
+	}
+
+	return topic, nil
 }
 
 func (s *producerService) newCanaryMessage() CanaryMessage {

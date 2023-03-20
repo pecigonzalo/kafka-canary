@@ -50,7 +50,8 @@ func main() {
 		Msg("Configuration")
 
 	// Start context
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Start HTTP server
 	logger.Info().
