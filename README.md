@@ -11,17 +11,17 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 
 ⚠️ In Progress⚠️
 
-- [ ] Implement core monitors
-  - [ ] Topic activities
-  - [ ] Producer
-  - [ ] Consumer
+- [x] Implement core monitors
+  - [x] Topic activities
+  - [x] Producer
+  - [x] Consumer
 - [x] Configuration
   - [x] Environment variables
   - [x] Configuration File
   - [x] Arguments
-- [ ] Support files
-  - [ ] Kuberentes deployment example
-  - [ ] Helm chart
+- [x] Support files
+  - [x] Kuberentes deployment example
+  - [x] Helm chart
 - [ ] Usage docs
 
 ## Requirements
