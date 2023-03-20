@@ -32,14 +32,6 @@ type CanaryManager struct {
 	logger            *zerolog.Logger
 }
 
-var (
-//	expectedClusterSizeError = promauto.NewCounterVec(prometheus.CounterOpts{
-//		Name:      "expected_cluster_size_error_total",
-//		Namespace: "strimzi_canary",
-//		Help:      "Total number of errors while waiting the Kafka cluster having the expected size",
-//	}, nil)
-)
-
 // NewCanaryManager returns an instance of the cananry manager worker
 func NewCanaryManager(canaryConfig canary.Config,
 	topicService services.TopicService, producerService services.ProducerService,
@@ -116,12 +108,12 @@ func (cm *CanaryManager) reconcile(ctx context.Context) {
 
 	if result, err := cm.topicService.Reconcile(ctx); err == nil {
 		if result.RefreshProducerMetadata {
-			cm.producerService.Refresh()
+			cm.producerService.Refresh(ctx)
 		}
 
 		leaders, err := cm.consumerService.Leaders(ctx)
 		if err != nil || !reflect.DeepEqual(result.Leaders, leaders) {
-			cm.consumerService.Refresh()
+			cm.consumerService.Refresh(ctx)
 		}
 		// producer has to send to partitions assigned to brokers
 		cm.producerService.Send(ctx, result.Assignments)

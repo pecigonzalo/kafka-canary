@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,26 +17,10 @@ import (
 var (
 	RecordsProducedCounter uint64 = 0
 
-	recordsProduced = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "records_produced_total",
-		Namespace: metricsNamespace,
-		Help:      "The total number of records produced",
-	}, []string{"clientid", "partition"})
-
-	recordsProducedFailed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "records_produced_failed_total",
-		Namespace: metricsNamespace,
-		Help:      "The total number of records failed to produce",
-	}, []string{"clientid", "partition"})
-
-	// it's defined when the service is created because buckets are configurable
-	recordsProducedLatency *prometheus.HistogramVec
-
-	// refreshProducerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
-	// 	Name:      "producer_refresh_metadata_error_total",
-	// 	Namespace: metricsNamespace,
-	// 	Help:      "Total number of errors while refreshing producer metadata",
-	// }, []string{"clientid"})
+	recordsProduced              *prometheus.CounterVec
+	recordsProducedFailed        *prometheus.CounterVec
+	recordsProducedLatency       *prometheus.HistogramVec
+	refreshProducerMetadataError *prometheus.CounterVec
 )
 
 type producerService struct {
@@ -50,32 +34,59 @@ type producerService struct {
 }
 
 func NewProducerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ProducerService {
+	recordsProduced = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "records_produced_total",
+		Namespace:   metricsNamespace,
+		Help:        "The total number of records produced",
+		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
+	}, []string{"partition"})
+
+	recordsProducedFailed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "records_produced_failed_total",
+		Namespace:   metricsNamespace,
+		Help:        "The total number of records failed to produce",
+		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
+	}, []string{"partition"})
+
 	recordsProducedLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:      "records_produced_latency",
-		Namespace: metricsNamespace,
-		Help:      "Records produced latency in milliseconds",
-		Buckets:   canaryConfig.ProducerLatencyBuckets,
-	}, []string{"clientid", "partition"})
+		Name:        "records_produced_latency",
+		Namespace:   metricsNamespace,
+		Help:        "Records produced latency in milliseconds",
+		Buckets:     canaryConfig.ProducerLatencyBuckets,
+		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
+	}, []string{"partition"})
+
+	refreshProducerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "producer_refresh_metadata_error_total",
+		Namespace:   metricsNamespace,
+		Help:        "Total number of errors while refreshing producer metadata",
+		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
+	}, []string{})
+
+	serviceLogger := logger.With().
+		Str("topic", canaryConfig.Topic).
+		Str("clientId", canaryConfig.ClientID).
+		Logger()
 
 	client, err := client.NewConnector(connectorConfig)
 	if err != nil {
-		logger.Fatal().Msg("Error creating producer service client")
+		serviceLogger.Fatal().Msg("Error creating producer service client")
 	}
-	logger.Info().Msg("Created producer service client")
+	serviceLogger.Info().Msg("Created producer service client")
 
 	producer := &kafka.Writer{
 		Addr:      kafka.TCP(connectorConfig.BrokerAddrs...),
 		Transport: client.KafkaClient.Transport,
 		Topic:     canaryConfig.Topic,
 	}
-	logger.Info().Msg("Created producer service writer")
+	serviceLogger.Info().Msg("Created producer service writer")
 
 	return &producerService{
 		client:          client,
 		producer:        producer,
 		canaryConfig:    &canaryConfig,
 		connectorConfig: connectorConfig,
-		logger:          logger,
+		logger:          &serviceLogger,
 	}
 }
 
@@ -91,33 +102,42 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 			Str("value", value.String()).
 			Int("partition", i).
 			Msg("Sending message")
+		partitionString := strconv.Itoa(i)
 
 		err := s.producer.WriteMessages(ctx, msg)
 		timestamp := time.Now().UnixMilli()
-		labels := prometheus.Labels{
-			"clientid":  s.canaryConfig.ClientID,
-			"partition": fmt.Sprintf("%v", i),
-		}
-		recordsProduced.With(labels).Inc()
+		recordsProduced.WithLabelValues(partitionString).Inc()
 		RecordsProducedCounter++
 
 		if err != nil {
 			s.logger.Warn().Msgf("Error sending message: %v", err)
-			recordsProducedFailed.With(labels).Inc()
+			recordsProducedFailed.WithLabelValues(partitionString).Inc()
 		} else {
 			duration := timestamp - value.Timestamp
 			s.logger.Info().
 				Int("partition", i).
 				Int64("duration", duration).
 				Msg("Message sent")
-			recordsProducedLatency.With(labels).Observe(float64(duration))
+			recordsProducedLatency.WithLabelValues(partitionString).Observe(float64(duration))
 		}
 	}
 }
 
-func (s *producerService) Refresh() {
-	// TODO: Implement
+func (s *producerService) Refresh(ctx context.Context) {
 	s.logger.Info().Msg("Producer refreshing metadata")
+	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
+		Topics: []string{s.canaryConfig.Topic},
+	})
+	if err != nil {
+		refreshProducerMetadataError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error freshing metadata in producer")
+	}
+	for _, topic := range resp.Topics {
+		if topic.Error != nil {
+			refreshProducerMetadataError.WithLabelValues().Inc()
+			s.logger.Error().Err(topic.Error).Msg("Error freshing metadata in consumer")
+		}
+	}
 }
 
 func (s *producerService) Close() {

@@ -18,26 +18,10 @@ import (
 var (
 	RecordsConsumedCounter uint64 = 0
 
-	recordsConsumed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "records_consumed_total",
-		Namespace: metricsNamespace,
-		Help:      "The total number of records consumed",
-	}, []string{"clientid", "partition"})
-
-	recordsConsumerFailed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:      "consumer_error_total",
-		Namespace: metricsNamespace,
-		Help:      "Total number of errors reported by the consumer",
-	}, []string{"clientid"})
-
-	// it's defined when the service is created because buckets are configurable
-	recordsEndToEndLatency *prometheus.HistogramVec
-
-	// refreshConsumerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
-	// 	Name:      "consumer_refresh_metadata_error_total",
-	// 	Namespace: metricsNamespace,
-	// 	Help:      "Total number of errors while refreshing consumer metadata",
-	// }, []string{"clientid"})
+	recordsConsumed              *prometheus.CounterVec
+	recordsConsumerFailed        *prometheus.CounterVec
+	recordsEndToEndLatency       *prometheus.HistogramVec
+	refreshConsumerMetadataError *prometheus.CounterVec
 )
 
 type consumerService struct {
@@ -52,22 +36,50 @@ type consumerService struct {
 }
 
 func NewConsumerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ConsumerService {
-	recordsEndToEndLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:      "records_consumed_latency",
-		Namespace: metricsNamespace,
-		Help:      "Records end-to-end latency in milliseconds",
-		Buckets:   canaryConfig.EndToEndLatencyBuckets,
-	}, []string{"clientid", "partition"})
+	recordsConsumed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "records_consumed_total",
+		Namespace:   metricsNamespace,
+		Help:        "The total number of records consumed",
+		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
+	}, []string{"partition"})
 
+	recordsConsumerFailed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "consumer_error_total",
+		Namespace:   metricsNamespace,
+		Help:        "Total number of errors reported by the consumer",
+		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
+	}, []string{})
+
+	recordsEndToEndLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:        "records_consumed_latency",
+		Namespace:   metricsNamespace,
+		Help:        "Records end-to-end latency in milliseconds",
+		Buckets:     canaryConfig.EndToEndLatencyBuckets,
+		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
+	}, []string{"partition"})
+
+	refreshConsumerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:        "consumer_refresh_metadata_error_total",
+		Namespace:   metricsNamespace,
+		Help:        "Total number of errors while refreshing consumer metadata",
+		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},
+	}, []string{})
+
+	// NOTE: Shuold we get this context from the caller?
 	ctx := context.Background()
+
+	serviceLogger := logger.With().
+		Str("topic", canaryConfig.Topic).
+		Str("consumerGroup", canaryConfig.ConsumerGroupID).
+		Logger()
 
 	client, err := client.NewBrokerAdminClient(ctx, client.BrokerAdminClientConfig{
 		ConnectorConfig: connectorConfig,
-	}, logger)
+	}, &serviceLogger)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating consumer service client")
+		serviceLogger.Fatal().Err(err).Msg("Error creating consumer service client")
 	}
-	logger.Info().Msg("Created consumer service client")
+	serviceLogger.Info().Msg("Created consumer service client")
 
 	consumer := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     client.GetConnector().Config.BrokerAddrs,
@@ -83,7 +95,7 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		consumer:        consumer,
 		canaryConfig:    &canaryConfig,
 		connectorConfig: connectorConfig,
-		logger:          logger,
+		logger:          &serviceLogger,
 	}
 }
 
@@ -109,14 +121,11 @@ func (s *consumerService) Consume(ctx context.Context) {
 					)
 					continue
 				} else if ctx.Err() != nil {
-					s.logger.Info().Str("topic", s.canaryConfig.Topic).Msg("Consumer context cancelled")
+					s.logger.Info().Msg("Consumer context cancelled")
 					return
 				} else {
-					s.logger.Error().Err(err).Str("topic", s.canaryConfig.Topic).Msg("Error consuming topic")
-					labels := prometheus.Labels{
-						"clientid": s.canaryConfig.ClientID,
-					}
-					recordsConsumerFailed.With(labels).Inc()
+					s.logger.Error().Err(err).Msg("Error consuming topic")
+					recordsConsumerFailed.WithLabelValues().Inc()
 				}
 			}
 
@@ -129,16 +138,15 @@ func (s *consumerService) Consume(ctx context.Context) {
 				s.logger.Err(err).Msg("Error creating new canary message")
 				return
 			}
+			partitionString := strconv.Itoa(message.Partition)
 
 			timestamp := time.Now().UnixMilli()
 			duration := timestamp - canaryMessage.Timestamp
-			labels := prometheus.Labels{
-				"clientid":  s.canaryConfig.ClientID,
-				"partition": strconv.Itoa(int(message.Partition)),
-			}
-			recordsEndToEndLatency.With(labels).Observe(float64(duration))
-			recordsConsumed.With(labels).Inc()
+
+			recordsEndToEndLatency.WithLabelValues(partitionString).Observe(float64(duration))
+			recordsConsumed.WithLabelValues(partitionString).Inc()
 			RecordsConsumedCounter++
+
 			s.logger.Info().
 				Int64("duration", duration).
 				Int("partition", message.Partition).
@@ -156,9 +164,21 @@ func (s *consumerService) Consume(ctx context.Context) {
 	}()
 }
 
-func (s *consumerService) Refresh() {
-	// TODO: Implement
-	s.logger.Info().Msg("Producer refreshing metadata")
+func (s *consumerService) Refresh(ctx context.Context) {
+	s.logger.Info().Msg("Consumer refreshing metadata")
+	resp, err := s.client.GetConnector().KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
+		Topics: []string{s.canaryConfig.Topic},
+	})
+	if err != nil {
+		refreshConsumerMetadataError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error freshing metadata in consumer")
+	}
+	for _, topic := range resp.Topics {
+		if topic.Error != nil {
+			refreshConsumerMetadataError.WithLabelValues().Inc()
+			s.logger.Error().Err(topic.Error).Msg("Error freshing metadata in consumer")
+		}
+	}
 }
 
 func (s *consumerService) Leaders(ctx context.Context) (map[int]int, error) {
