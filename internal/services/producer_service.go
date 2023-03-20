@@ -15,12 +15,9 @@ import (
 )
 
 var (
-	RecordsProducedCounter uint64 = 0
-
-	recordsProduced              *prometheus.CounterVec
-	recordsProducedFailed        *prometheus.CounterVec
-	recordsProducedLatency       *prometheus.HistogramVec
-	refreshProducerMetadataError *prometheus.CounterVec
+	recordsProduced        *prometheus.CounterVec
+	recordsProducedFailed  *prometheus.CounterVec
+	recordsProducedLatency *prometheus.HistogramVec
 )
 
 type producerService struct {
@@ -56,13 +53,6 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
 	}, []string{"partition"})
 
-	refreshProducerMetadataError = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:        "producer_refresh_metadata_error_total",
-		Namespace:   metricsNamespace,
-		Help:        "Total number of errors while refreshing producer metadata",
-		ConstLabels: prometheus.Labels{"clientid": canaryConfig.ClientID},
-	}, nil)
-
 	serviceLogger := logger.With().
 		Str("canaryService", "producer").
 		Str("topic", canaryConfig.Topic).
@@ -94,68 +84,44 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 func (s *producerService) Send(ctx context.Context, partitionAssignments []int) {
 	numPartitions := len(partitionAssignments)
 	for i := 0; i < numPartitions; i++ {
-		value := s.newCanaryMessage()
-		msg := kafka.Message{
-			Partition: i,
-			Value:     []byte(value.JSON()),
-		}
-		s.logger.Debug().
-			Str("value", value.String()).
-			Int("partition", i).
-			Msg("Sending message")
-		partitionString := strconv.Itoa(i)
-
-		err := s.producer.WriteMessages(ctx, msg)
-		timestamp := time.Now().UnixMilli()
-		recordsProduced.WithLabelValues(partitionString).Inc()
-		RecordsProducedCounter++
-
-		if err != nil {
-			s.logger.Warn().Msgf("Error sending message: %v", err)
-			recordsProducedFailed.WithLabelValues(partitionString).Inc()
-		} else {
-			duration := timestamp - value.Timestamp
-			s.logger.Info().
+		go func(i int) {
+			value := s.newCanaryMessage()
+			msg := kafka.Message{
+				Partition: i,
+				Value:     []byte(value.JSON()),
+			}
+			s.logger.Debug().
+				Str("value", value.String()).
 				Int("partition", i).
-				Int64("duration", duration).
-				Msg("Message sent")
-			recordsProducedLatency.WithLabelValues(partitionString).Observe(float64(duration))
-		}
-	}
-}
+				Msg("Sending message")
+			partitionString := strconv.Itoa(i)
 
-func (s *producerService) Refresh(ctx context.Context) {
-	s.logger.Info().Msg("Producer refreshing metadata")
-	_, err := s.getMetadata(ctx)
-	if err != nil {
-		refreshProducerMetadataError.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error refreshing metadata")
+			err := s.producer.WriteMessages(ctx, msg)
+			timestamp := time.Now().UnixMilli()
+			recordsProduced.WithLabelValues(partitionString).Inc()
+
+			if err != nil {
+				recordsProducedFailed.WithLabelValues(partitionString).Inc()
+				s.logger.Warn().Msgf("Error sending message: %v", err)
+			} else {
+				duration := timestamp - value.Timestamp
+				recordsProducedLatency.WithLabelValues(partitionString).Observe(float64(duration))
+				s.logger.Info().
+					Int("partition", i).
+					Int64("duration", duration).
+					Msg("Message sent")
+			}
+		}(i)
 	}
 }
 
 func (s *producerService) Close() {
-	s.logger.Info().Msg("Closing producer")
+	s.logger.Info().Msg("Service closing")
 	err := s.producer.Close()
 	if err != nil {
 		s.logger.Fatal().Err(err).Msg("Error closing the kafka producer")
 	}
-	s.logger.Info().Msg("Producer closed")
-}
-
-func (s *producerService) getMetadata(ctx context.Context) (kafka.Topic, error) {
-	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
-		Topics: []string{s.canaryConfig.Topic},
-	})
-	if err != nil {
-		return kafka.Topic{}, err
-	}
-
-	topic := resp.Topics[0]
-	if topic.Error != nil {
-		return kafka.Topic{}, err
-	}
-
-	return topic, nil
+	s.logger.Info().Msg("Service closed")
 }
 
 func (s *producerService) newCanaryMessage() CanaryMessage {

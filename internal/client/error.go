@@ -4,15 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"syscall"
 
 	"github.com/segmentio/kafka-go"
-)
-
-var (
-	// ErrTopicDoesNotExist is returned by admin functions when a topic that should exist
-	// does not.
-	ErrTopicDoesNotExist = errors.New("topic does not exist")
 )
 
 func KafkaErrorsToErr(kerrs map[string]error) error {
@@ -62,4 +57,9 @@ func IsTransientNetworkError(err error) bool {
 		errors.Is(err, syscall.ECONNREFUSED) ||
 		errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, syscall.EPIPE)
+}
+
+// IsDisconnection returns true if the err provided represents a TCP disconnection
+func IsDisconnection(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ETIMEDOUT) || errors.Is(err, os.ErrDeadlineExceeded)
 }

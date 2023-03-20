@@ -4,7 +4,7 @@ build:
 
 .PHONY test:
 test:
-	go test -v -cover -race -parallel ./...
+	go test -v -cover -race ./...
 
 .PHONY fmt:
 fmt:

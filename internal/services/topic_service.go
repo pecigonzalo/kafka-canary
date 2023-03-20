@@ -167,7 +167,7 @@ func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, err
 }
 
 func (s topicService) Close() {
-	s.logger.Info().Msg("Closing topic service")
+	s.logger.Info().Msg("Service closed")
 }
 
 func (s *topicService) reconcileConfiguration(ctx context.Context) error {
@@ -268,12 +268,7 @@ func (s *topicService) createTopic(ctx context.Context, brokers []kafka.Broker) 
 	assignments := s.requestAssignments(ctx, 0, brokers)
 
 	var replicaAssignments []kafka.ReplicaAssignment
-	for _, v := range assignments {
-		replicaAssignments = append(replicaAssignments, kafka.ReplicaAssignment{
-			Partition: v.ID,
-			Replicas:  v.Replicas,
-		})
-	}
+	replicaAssignments = append(replicaAssignments, assignments...)
 
 	resp, err := s.client.KafkaClient.CreateTopics(ctx, &kafka.CreateTopicsRequest{
 		Topics: []kafka.TopicConfig{{
@@ -304,7 +299,7 @@ func (s *topicService) createTopic(ctx context.Context, brokers []kafka.Broker) 
 	return nil
 }
 
-func (s *topicService) addPartitions(ctx context.Context, topic string, assignments []client.PartitionAssignment) error {
+func (s *topicService) addPartitions(ctx context.Context, topic string, assignments []kafka.ReplicaAssignment) error {
 	topicInfo, err := s.getTopic(ctx)
 	if err != nil {
 		return err
@@ -344,13 +339,15 @@ func (s *topicService) addPartitions(ctx context.Context, topic string, assignme
 	return nil
 }
 
-func (s *topicService) assignPartitions(ctx context.Context, topic string, assignments []client.PartitionAssignment) error {
+func (s *topicService) assignPartitions(ctx context.Context, topic string, assignments []kafka.ReplicaAssignment) error {
 	var requestAssignments []kafka.AlterPartitionReassignmentsRequestAssignment
 
-	for _, assassignment := range assignments {
+	for _, assignment := range assignments {
+		var brokerIDs []int
+		brokerIDs = append(brokerIDs, assignment.Replicas...)
 		requestAssignments = append(requestAssignments, kafka.AlterPartitionReassignmentsRequestAssignment{
-			PartitionID: assassignment.ID,
-			BrokerIDs:   assassignment.Replicas,
+			PartitionID: assignment.Partition,
+			BrokerIDs:   brokerIDs,
 		})
 	}
 
@@ -404,7 +401,7 @@ func (s *topicService) updateTopicConfig(ctx context.Context, topic string, conf
 	return nil
 }
 
-func (s *topicService) requestAssignments(ctx context.Context, currentPartitions int, brokers []kafka.Broker) []client.PartitionAssignment {
+func (s *topicService) requestAssignments(ctx context.Context, currentPartitions int, brokers []kafka.Broker) []kafka.ReplicaAssignment {
 	brokersNumber := len(brokers)
 	partitions := max(currentPartitions, brokersNumber)
 	replicationFactor := min(brokersNumber, 3)
@@ -457,15 +454,15 @@ func (s *topicService) requestAssignments(ctx context.Context, currentPartitions
 		}
 	}
 
-	assignments := []client.PartitionAssignment{}
+	assignments := []kafka.ReplicaAssignment{}
 	for p := 0; p < partitions; p++ {
 		replicas := []int{}
 		for r := 0; r < replicationFactor; r++ {
 			replicas = append(replicas, r+1)
 		}
-		assignments = append(assignments, client.PartitionAssignment{
-			ID:       p,
-			Replicas: replicas,
+		assignments = append(assignments, kafka.ReplicaAssignment{
+			Partition: p,
+			Replicas:  replicas,
 		})
 	}
 
