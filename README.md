@@ -15,8 +15,8 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 - [ ] Integration tests
 - [x] Implement core monitors
   - [x] Topic activities
-  - [ ] Producer
-  - [ ] Consumer
+  - [x] Producer
+  - [x] Consumer
 - [x] Configuration
   - [x] Environment variables
   - [x] Configuration File
