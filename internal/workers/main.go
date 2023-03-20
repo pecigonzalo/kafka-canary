@@ -3,7 +3,6 @@ package workers
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"time"
 
@@ -59,15 +58,12 @@ func (cm *CanaryManager) Start(ctx context.Context) {
 	cm.connectionService.Open()
 	cm.statusService.Open()
 
-	result, err := cm.topicService.Reconcile(ctx)
+	_, err := cm.topicService.Reconcile(ctx)
 	if err != nil {
 		cm.logger.Fatal().Err(err).Msg("Error starting canary manager")
 	}
-	cm.logger.Info().Msg("Consume and produce")
 	// consumer will subscribe to the topic so all partitions (even if we have less brokers)
 	cm.consumerService.Consume(ctx)
-	// producer has to send to partitions assigned to brokers
-	cm.producerService.Send(ctx, result.Assignments)
 
 	cm.logger.Info().Dur("interval", cm.canaryConfig.ReconcileInterval).Msg("Running reconciliation loop")
 	ticker := time.NewTicker(cm.canaryConfig.ReconcileInterval)
@@ -107,14 +103,6 @@ func (cm *CanaryManager) reconcile(ctx context.Context) {
 	cm.logger.Info().Msg("Canary manager reconcile")
 
 	if result, err := cm.topicService.Reconcile(ctx); err == nil {
-		if result.RefreshProducerMetadata {
-			cm.producerService.Refresh(ctx)
-		}
-
-		leaders, err := cm.consumerService.Leaders(ctx)
-		if err != nil || !reflect.DeepEqual(result.Leaders, leaders) {
-			cm.consumerService.Refresh(ctx)
-		}
 		// producer has to send to partitions assigned to brokers
 		cm.producerService.Send(ctx, result.Assignments)
 	}
