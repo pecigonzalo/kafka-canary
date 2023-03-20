@@ -27,11 +27,11 @@ var (
 		Help:      "Total number of errors while creating the canary topic",
 	}, []string{"topic"})
 
-	// describeClusterError = promauto.NewCounterVec(prometheus.CounterOpts{
-	// 	Name:      "topic_describe_cluster_error_total",
-	// 	Namespace: metricsNamespace,
-	// 	Help:      "Total number of errors while describing cluster",
-	// }, nil)
+	describeClusterError = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name:      "topic_describe_cluster_error_total",
+		Namespace: metricsNamespace,
+		Help:      "Total number of errors while describing cluster",
+	}, nil)
 
 	describeTopicError = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:      "topic_describe_error_total",
@@ -106,14 +106,16 @@ func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, err
 
 	brokerIds, err := s.admin.GetBrokerIDs(ctx)
 	if err != nil {
-		s.logger.Fatal().Err(err).Msg("Error getting broker IDs")
-		// NOTE: Could we return instead?
+		describeClusterError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error getting broker IDs")
+		return result, err
 	}
 
 	brokers, err := s.admin.GetBrokers(ctx, brokerIds)
 	if err != nil {
-		s.logger.Fatal().Err(err).Msg("Error getting broker information")
-		// NOTE: Could we return instead?
+		describeClusterError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error getting broker information")
+		return result, err
 	}
 
 	topic, err := s.getTopic(ctx)
