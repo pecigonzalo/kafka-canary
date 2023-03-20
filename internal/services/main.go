@@ -30,13 +30,13 @@ type TopicService interface {
 
 type ProducerService interface {
 	Send(context.Context, []int)
-	Refresh()
+	Refresh(context.Context)
 	Close()
 }
 
 type ConsumerService interface {
 	Consume(context.Context)
-	Refresh()
+	Refresh(context.Context)
 	Leaders(context.Context) (map[int]int, error)
 	Close()
 }
