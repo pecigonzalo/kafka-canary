@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -27,12 +25,6 @@ const (
 	configSourceDynamicBrokerLoggerConfig  int8 = 6
 
 	sensitivePlaceholder = "SENSITIVE"
-)
-
-var (
-	// ErrTopicDoesNotExist is returned by admin functions when a topic that should exist
-	// does not.
-	ErrTopicDoesNotExist = errors.New("topic does not exist")
 )
 
 // BrokerAdminClient is a Client implementation that only uses broker APIs, without any
@@ -463,45 +455,6 @@ func (c *BrokerAdminClient) UpdateBrokerConfig(
 	return updated, nil
 }
 
-type ResponseErrors struct {
-	ResponseErrors map[string]error
-}
-
-func (e *ResponseErrors) Error() string {
-	return fmt.Sprintf("Response contains errors: %v", e.ResponseErrors)
-}
-
-func KafkaErrorsToErr(errors map[string]error) error {
-	var hasErrors bool
-	for _, err := range errors {
-		if err != nil {
-			hasErrors = true
-			break
-		}
-	}
-	if hasErrors {
-		return fmt.Errorf("kafka errors: %w", &ResponseErrors{
-			ResponseErrors: errors,
-		})
-	}
-	return nil
-}
-
-func IncrementalAlterConfigsResponseResourcesError(resources []kafka.IncrementalAlterConfigsResponseResource) error {
-	errors := map[string]error{}
-	var hasErrors bool
-	for _, resource := range resources {
-		if resource.Error != nil {
-			hasErrors = true
-			errors[resource.ResourceName] = resource.Error
-		}
-	}
-	if hasErrors {
-		return fmt.Errorf("%+w", &ResponseErrors{ResponseErrors: errors})
-	}
-	return nil
-}
-
 // CreateTopic creates a topic in the cluster.
 func (c *BrokerAdminClient) CreateTopic(
 	ctx context.Context,
@@ -560,6 +513,9 @@ func (c *BrokerAdminClient) AssignPartitions(
 		return err
 	}
 	if err = resp.Error; err != nil {
+		return err
+	}
+	if err = AlterPartitionReassignmentsRequestAssignmentError(resp.PartitionResults); err != nil {
 		return err
 	}
 
@@ -668,7 +624,7 @@ func (c *BrokerAdminClient) getMetadata(
 	}
 	c.logger.Debug().Msgf("Metadata request: %+v", req)
 	resp, err := c.client.Metadata(ctx, &req)
-	c.logger.Debug().Msgf("Metadata response: %+v (%+v)", resp, err)
+	c.logger.Trace().Msgf("Metadata response: %+v (%+v)", resp, err)
 
 	return resp, err
 }
@@ -680,7 +636,7 @@ func (c *BrokerAdminClient) getAPIVersions(ctx context.Context) (
 	req := kafka.ApiVersionsRequest{}
 	c.logger.Debug().Msgf("API versions request: %+v", req)
 	resp, err := c.client.ApiVersions(ctx, &req)
-	c.logger.Debug().Msgf("API versions response: %+v (%+v)", resp, err)
+	c.logger.Trace().Msgf("API versions response: %+v (%+v)", resp, err)
 
 	return resp, err
 }
@@ -717,11 +673,4 @@ func configEntriesToAPIConfigs(
 	}
 
 	return apiConfigs
-}
-
-func IsTransientNetworkError(err error) bool {
-	return errors.Is(err, io.ErrUnexpectedEOF) ||
-		errors.Is(err, syscall.ECONNREFUSED) ||
-		errors.Is(err, syscall.ECONNRESET) ||
-		errors.Is(err, syscall.EPIPE)
 }

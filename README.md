@@ -11,17 +11,19 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 
 ⚠️ In Progress⚠️
 
-- [ ] Implement core monitors
-  - [ ] Topic activities
+- [ ] Behaviour tests
+- [ ] Integration tests
+- [x] Implement core monitors
+  - [x] Topic activities
   - [ ] Producer
   - [ ] Consumer
 - [x] Configuration
   - [x] Environment variables
   - [x] Configuration File
   - [x] Arguments
-- [ ] Support files
-  - [ ] Kuberentes deployment example
-  - [ ] Helm chart
+- [x] Support files
+  - [x] Kuberentes deployment example
+  - [x] Helm chart
 - [ ] Usage docs
 
 ## Requirements
@@ -31,7 +33,7 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 ### Optional
 
 - [direnv](https://direnv.net/)
-- [Nix](https://nixos.org/) with [Flakes](https://nixos.wiki/wiki/Flakes) 
+- [Nix](https://nixos.org/) with [Flakes](https://nixos.wiki/wiki/Flakes)
 
 ## Thanks
 
