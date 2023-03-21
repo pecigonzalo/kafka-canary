@@ -251,8 +251,8 @@ github.com/rs/zerolog v1.29.0/go.mod h1:NILgTygv/Uej1ra5XxGf82ZFSLk58MFGAUS2o6us
 github.com/segmentio/kafka-go v0.4.28/go.mod h1:XzMcoMjSzDGHcIwpWUI7GB43iKZ2fTVmryPSGLf/MPg=
 github.com/segmentio/kafka-go v0.4.39 h1:75smaomhvkYRwtuOwqLsdhgCG30B82NsbdkdDfFbvrw=
 github.com/segmentio/kafka-go v0.4.39/go.mod h1:T0MLgygYvmqmBvC+s8aCcbVNfJN4znVne5j0Pzowp/Q=
-github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.0.0-20221118181021-eba9cae7fd57 h1:HNInv2e6vzUx05XOD4tVwGvNzr4QSXkP+itWkjbHTVA=
-github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.0.0-20221118181021-eba9cae7fd57/go.mod h1:IjMUGcOJoATsnlqAProGN1ezXeEgU5GCWr1/EzmkEMA=
+github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.1.0 h1:VCHu5TTj05cEOIfdB2GTS9/8NeZvqyDIqSUh5SjOhUs=
+github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.1.0/go.mod h1:IjMUGcOJoATsnlqAProGN1ezXeEgU5GCWr1/EzmkEMA=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=
