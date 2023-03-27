@@ -21,7 +21,7 @@ type Admin interface {
 var _ Admin = (*BrokerAdmin)(nil)
 
 type BrokerAdmin struct {
-	client KafkaClient
+	client KafkaAdminClient
 }
 
 func NewBrokerAdmin(config ConnectorConfig) (*BrokerAdmin, error) {

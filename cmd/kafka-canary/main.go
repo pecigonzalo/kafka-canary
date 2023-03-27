@@ -80,10 +80,20 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Unable to create broker admin client")
 	}
-
 	topicService := services.NewTopicService(admin, config.Canary, &logger)
-	producerService := services.NewProducerService(config.Canary, connectorConfig, &logger)
-	consumerService := services.NewConsumerService(config.Canary, connectorConfig, &logger)
+
+	consumer, err := client.NewConsumerClient(connectorConfig, config.Canary.Topic, config.Canary.ClientID, config.Canary.ConsumerGroupID)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create connector")
+	}
+
+	consumerService := services.NewConsumerService(consumer, config.Canary, &logger)
+
+	producer, err := client.NewProducerClient(connectorConfig, config.Canary.Topic, config.Canary.ClientID)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create connector")
+	}
+	producerService := services.NewProducerService(producer, config.Canary, &logger)
 
 	// start canary manager
 	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, &logger)

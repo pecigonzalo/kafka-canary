@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
-	"github.com/segmentio/kafka-go"
 
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/client"
@@ -26,16 +25,14 @@ type ProducerService interface {
 }
 
 type producerService struct {
-	client          *client.Connector
-	producer        *kafka.Writer
-	canaryConfig    *canary.Config
-	connectorConfig *client.ConnectorConfig
-	logger          *zerolog.Logger
+	client       client.Producer
+	canaryConfig *canary.Config
+	logger       *zerolog.Logger
 	// index of the next message to send
 	index int
 }
 
-func NewProducerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ProducerService {
+func NewProducerService(client client.Producer, canaryConfig canary.Config, logger *zerolog.Logger) ProducerService {
 	recordsProduced = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:        "records_produced_total",
 		Namespace:   metricsNamespace,
@@ -64,25 +61,12 @@ func NewProducerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Str("clientId", canaryConfig.ClientID).
 		Logger()
 
-	client, err := client.NewConnector(connectorConfig)
-	if err != nil {
-		serviceLogger.Fatal().Msg("Error creating producer service client")
-	}
-	serviceLogger.Info().Msg("Created producer service client")
-
-	producer := &kafka.Writer{
-		Addr:      kafka.TCP(client.Config.BrokerAddrs...),
-		Transport: client.KafkaClient.Transport,
-		Topic:     canaryConfig.Topic,
-	}
 	serviceLogger.Info().Msg("Created producer service writer")
 
 	return &producerService{
-		client:          client,
-		producer:        producer,
-		canaryConfig:    &canaryConfig,
-		connectorConfig: &connectorConfig,
-		logger:          &serviceLogger,
+		client:       client,
+		canaryConfig: &canaryConfig,
+		logger:       &serviceLogger,
 	}
 }
 
@@ -91,7 +75,7 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 	for i := 0; i < numPartitions; i++ {
 		go func(i int) {
 			value := s.newCanaryMessage()
-			msg := kafka.Message{
+			msg := client.Message{
 				Partition: i,
 				Value:     []byte(value.JSON()),
 			}
@@ -101,7 +85,7 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 				Msg("Sending message")
 			partitionString := strconv.Itoa(i)
 
-			err := s.producer.WriteMessages(ctx, msg)
+			err := s.client.Write(ctx, msg)
 			timestamp := time.Now().UnixMilli()
 			recordsProduced.WithLabelValues(partitionString).Inc()
 
@@ -122,7 +106,7 @@ func (s *producerService) Send(ctx context.Context, partitionAssignments []int) 
 
 func (s *producerService) Close() {
 	s.logger.Info().Msg("Service closing")
-	err := s.producer.Close()
+	err := s.client.Close()
 	if err != nil {
 		s.logger.Fatal().Err(err).Msg("Error closing the kafka producer")
 	}

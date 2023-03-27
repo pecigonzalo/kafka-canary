@@ -1,5 +1,14 @@
 package client
 
+// Message is a simpler internal representation of kafka.Message
+// Topic, Partition and Offset are the required fields for commiting a message
+type Message struct {
+	Topic     string
+	Partition int
+	Offset    int64
+	Value     []byte
+}
+
 // TopicInfo represents the information stored about a topic.
 type TopicInfo struct {
 	Name       string                `json:"name"`

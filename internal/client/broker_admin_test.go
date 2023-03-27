@@ -145,7 +145,7 @@ func TestNewBrokerAdmin(t *testing.T) {
 
 func TestBrokerAdmin_GetTopic(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx  context.Context
@@ -189,7 +189,7 @@ func TestBrokerAdmin_GetTopic(t *testing.T) {
 
 func TestBrokerAdmin_CreateTopic(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx         context.Context
@@ -234,7 +234,7 @@ func TestBrokerAdmin_CreateTopic(t *testing.T) {
 
 func TestBrokerAdmin_UpdateTopicConfig(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx     context.Context
@@ -284,7 +284,7 @@ func TestBrokerAdmin_UpdateTopicConfig(t *testing.T) {
 
 func TestBrokerAdmin_GetBrokers(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx context.Context
@@ -327,7 +327,7 @@ func TestBrokerAdmin_GetBrokers(t *testing.T) {
 
 func TestBrokerAdmin_AddParitions(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx         context.Context
@@ -379,7 +379,7 @@ func TestBrokerAdmin_AddParitions(t *testing.T) {
 
 func TestBrokerAdmin_AssignPartitions(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx         context.Context
@@ -429,7 +429,7 @@ func TestBrokerAdmin_AssignPartitions(t *testing.T) {
 
 func TestBrokerAdmin_RunLeaderElection(t *testing.T) {
 	type fields struct {
-		client KafkaClient
+		client KafkaAdminClient
 	}
 	type args struct {
 		ctx        context.Context
