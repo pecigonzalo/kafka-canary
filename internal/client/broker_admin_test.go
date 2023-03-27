@@ -45,7 +45,7 @@ type mockKafkaClient struct {
 	electLeadersResponse                *kafka.ElectLeadersResponse
 }
 
-func NewMockKafkaClient(err error, metadataResponse *kafka.MetadataResponse) *mockKafkaClient {
+func newMockKafkaClient(err error, metadataResponse *kafka.MetadataResponse) *mockKafkaClient {
 	mock := &mockKafkaClient{
 		err: nil,
 		metadataResponse: &kafka.MetadataResponse{
@@ -160,7 +160,7 @@ func TestBrokerAdmin_GetTopic(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName},
 			TopicInfo{Name: mockTopicName, Partitions: []PartitionAssignment{
 				{ID: 0, Replicas: []int{0, 1, 2}},
@@ -205,7 +205,7 @@ func TestBrokerAdmin_CreateTopic(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName, []PartitionAssignment{{ID: 0, Replicas: []int{0, 1, 2}}}, map[string]string{}},
 			false,
 		},
@@ -249,7 +249,7 @@ func TestBrokerAdmin_UpdateTopicConfig(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName, map[string]string{
 				"this": "that",
 			}},
@@ -298,7 +298,7 @@ func TestBrokerAdmin_GetBrokers(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background()},
 			[]BrokerInfo{
 				{ID: 0, Rack: "rack1"},
@@ -342,7 +342,7 @@ func TestBrokerAdmin_AddParitions(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName, []PartitionAssignment{
 				{ID: 0, Replicas: []int{0, 1, 2}},
 			}},
@@ -394,7 +394,7 @@ func TestBrokerAdmin_AssignPartitions(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName, []PartitionAssignment{
 				{ID: 0, Replicas: []int{0, 1, 2}},
 			}},
@@ -444,7 +444,7 @@ func TestBrokerAdmin_RunLeaderElection(t *testing.T) {
 	}{
 		{
 			"Default",
-			fields{client: NewMockKafkaClient(nil, nil)},
+			fields{client: newMockKafkaClient(nil, nil)},
 			args{context.Background(), mockTopicName, []int{0, 1, 2}},
 			false,
 		},
