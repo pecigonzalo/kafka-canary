@@ -9,15 +9,22 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 
 ## State
 
-⚠️ In Progress⚠️
+⚠️ Beta ⚠️
 
-- [ ] Behaviour tests
-- [ ] Integration tests
+- [ ] Tests
+  - [x] Client interface
+  - [ ] Service behaviour
+    - [ ] Expected metrics increase
+    - [ ] Expected handling
+      - [ ] Topics does not exist
+      - [ ] Topic partitions diff
+      - [ ] Topic config diff
+      - [ ] Topic change
+  - [ ] Integration tests
 - [x] Implement core monitors
   - [x] Topic activities
   - [x] Producer
   - [x] Consumer
-  - [ ] Connection
 - [x] Configuration
   - [x] Environment variables
   - [x] Configuration File
