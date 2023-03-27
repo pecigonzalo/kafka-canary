@@ -18,12 +18,11 @@ type ConsumerClient struct {
 	reader KafkaReaderClient
 }
 
-func NewConsumerClient(config ConnectorConfig, topic string, clientID string, consumerGroupID string) (*ConsumerClient, error) {
+func NewConsumerClient(config ConnectorConfig, topic string, consumerGroupID string) (*ConsumerClient, error) {
 	connector, err := NewConnector(config)
 	if err != nil {
 		return nil, err
 	}
-	connector.Dialer.ClientID = clientID
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:               connector.Config.BrokerAddrs,

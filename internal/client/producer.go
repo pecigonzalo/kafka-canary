@@ -17,12 +17,11 @@ type ProducerClient struct {
 	writer KafkaWriterClient
 }
 
-func NewProducerClient(config ConnectorConfig, topic string, clientID string) (*ProducerClient, error) {
+func NewProducerClient(config ConnectorConfig, topic string) (*ProducerClient, error) {
 	connector, err := NewConnector(config)
 	if err != nil {
 		return nil, err
 	}
-	connector.Dialer.ClientID = clientID
 
 	writer := &kafka.Writer{
 		Addr:      kafka.TCP(connector.Config.BrokerAddrs...),

@@ -22,7 +22,6 @@ var _ KafkaAdminClient = &kafka.Client{}
 type KafkaReaderClient interface {
 	FetchMessage(ctx context.Context) (kafka.Message, error)
 	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
-	Config() kafka.ReaderConfig
 	Close() error
 }
 

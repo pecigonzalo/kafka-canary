@@ -71,6 +71,7 @@ func main() {
 	httpServer, healthy, ready := srv.ListenAndServe()
 
 	connectorConfig := client.ConnectorConfig{
+		ClientID:    config.Canary.ClientID,
 		BrokerAddrs: config.Kafka.BrokerAddrs,
 		TLS:         config.Kafka.TLS,
 		SASL:        config.Kafka.SASL,
@@ -82,14 +83,14 @@ func main() {
 	}
 	topicService := services.NewTopicService(admin, config.Canary, &logger)
 
-	consumer, err := client.NewConsumerClient(connectorConfig, config.Canary.Topic, config.Canary.ClientID, config.Canary.ConsumerGroupID)
+	consumer, err := client.NewConsumerClient(connectorConfig, config.Canary.Topic, config.Canary.ConsumerGroupID)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Unable to create connector")
 	}
 
 	consumerService := services.NewConsumerService(consumer, config.Canary, &logger)
 
-	producer, err := client.NewProducerClient(connectorConfig, config.Canary.Topic, config.Canary.ClientID)
+	producer, err := client.NewProducerClient(connectorConfig, config.Canary.Topic)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Unable to create connector")
 	}
