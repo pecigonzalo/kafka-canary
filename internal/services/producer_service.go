@@ -20,6 +20,11 @@ var (
 	recordsProducedLatency *prometheus.HistogramVec
 )
 
+type ProducerService interface {
+	Send(context.Context, []int)
+	Close()
+}
+
 type producerService struct {
 	client          *client.Connector
 	producer        *kafka.Writer

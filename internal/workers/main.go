@@ -25,7 +25,6 @@ type CanaryManager struct {
 	producerService   services.ProducerService
 	consumerService   services.ConsumerService
 	connectionService services.ConnectionService
-	statusService     services.StatusService
 	stop              chan struct{}
 	syncStop          sync.WaitGroup
 	logger            *zerolog.Logger
@@ -35,14 +34,13 @@ type CanaryManager struct {
 func NewCanaryManager(canaryConfig canary.Config,
 	topicService services.TopicService, producerService services.ProducerService,
 	consumerService services.ConsumerService, connectionService services.ConnectionService,
-	statusService services.StatusService, logger *zerolog.Logger) Worker {
+	logger *zerolog.Logger) Worker {
 	cm := CanaryManager{
 		canaryConfig:      &canaryConfig,
 		topicService:      topicService,
 		producerService:   producerService,
 		consumerService:   consumerService,
 		connectionService: connectionService,
-		statusService:     statusService,
 		logger:            logger,
 	}
 	return &cm
@@ -56,7 +54,6 @@ func (cm *CanaryManager) Start(ctx context.Context) {
 	cm.syncStop.Add(1)
 
 	cm.connectionService.Open()
-	cm.statusService.Open()
 
 	_, err := cm.topicService.Reconcile(ctx)
 	if err != nil {
@@ -94,7 +91,6 @@ func (cm *CanaryManager) Stop() {
 	cm.consumerService.Close()
 	cm.topicService.Close()
 	cm.connectionService.Close()
-	cm.statusService.Close()
 
 	cm.logger.Info().Msg("Canary manager closed")
 }

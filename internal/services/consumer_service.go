@@ -22,6 +22,11 @@ var (
 	recordsEndToEndLatency *prometheus.HistogramVec
 )
 
+type ConsumerService interface {
+	Consume(context.Context)
+	Close()
+}
+
 type consumerService struct {
 	client          *client.Connector
 	consumer        *kafka.Reader

@@ -28,6 +28,11 @@ var (
 	alterTopicConfigurationError *prometheus.CounterVec
 )
 
+type TopicService interface {
+	Reconcile(context.Context) (TopicReconcileResult, error)
+	Close()
+}
+
 // TopicReconcileResult contains the result of a topic reconcile
 type TopicReconcileResult struct {
 	// new partitions assignments across brokers

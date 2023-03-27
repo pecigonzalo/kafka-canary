@@ -80,10 +80,9 @@ func main() {
 	producerService := services.NewProducerService(config.Canary, connectorConfig, &logger)
 	consumerService := services.NewConsumerService(config.Canary, connectorConfig, &logger)
 	connectionService := services.NewConnectionService(config.Canary, connectorConfig)
-	statusService := services.NewStatusServiceService(config.Canary, &logger)
 
 	// start canary manager
-	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, connectionService, statusService, &logger)
+	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, connectionService, &logger)
 	canaryManager.Start(ctx)
 
 	// graceful shutdown
