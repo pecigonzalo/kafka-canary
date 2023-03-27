@@ -76,7 +76,12 @@ func main() {
 		SASL:        config.Kafka.SASL,
 	}
 
-	topicService := services.NewTopicService(config.Canary, connectorConfig, &logger)
+	admin, err := client.NewBrokerAdmin(connectorConfig)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create broker admin client")
+	}
+
+	topicService := services.NewTopicService(admin, config.Canary, &logger)
 	producerService := services.NewProducerService(config.Canary, connectorConfig, &logger)
 	consumerService := services.NewConsumerService(config.Canary, connectorConfig, &logger)
 

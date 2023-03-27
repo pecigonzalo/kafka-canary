@@ -10,6 +10,7 @@ type TopicInfo struct {
 // replicas in a topic partition.
 type PartitionAssignment struct {
 	ID       int   `json:"id"`
+	Leader   int   `json:"leader"`
 	Replicas []int `json:"replicas"`
 }
 
