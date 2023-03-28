@@ -9,7 +9,7 @@ import (
 
 // A Kafka admin client that uses the Brokers API
 //
-//go:generate mockery --name Admin --output ../services/mocks
+//go:generate mockery --name Admin --with-expecter --output ../services/mocks
 type Admin interface {
 	GetTopic(ctx context.Context, name string) (TopicInfo, error)
 	CreateTopic(ctx context.Context, name string, assignments []PartitionAssignment, configs map[string]string) error

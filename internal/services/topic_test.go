@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Test_topicServiceMetrics tests the service expected metrics
+// we can change the mocks freely, but not the test expectations
 func Test_topicServiceMetrics(t *testing.T) {
 	mockTopic := "fake-topic"
 
@@ -68,6 +70,7 @@ func Test_topicServiceMetrics(t *testing.T) {
 			args: args{context.Background()},
 			mocks: func(t *testing.T) *mocks.Admin {
 				m := mocks.NewAdmin(t)
+
 				m.On("GetBrokers", mock.Anything).
 					Return([]client.BrokerInfo{
 						{ID: 1, Rack: "rack1"},
@@ -90,6 +93,7 @@ func Test_topicServiceMetrics(t *testing.T) {
 					Return(client.TopicInfo{
 						Name: mockTopic,
 					}, nil)
+
 				return m
 			},
 			metrics: []metrics{

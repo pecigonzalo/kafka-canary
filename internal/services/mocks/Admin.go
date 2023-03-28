@@ -15,6 +15,14 @@ type Admin struct {
 	mock.Mock
 }
 
+type Admin_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *Admin) EXPECT() *Admin_Expecter {
+	return &Admin_Expecter{mock: &_m.Mock}
+}
+
 // AddPartitions provides a mock function with given fields: ctx, name, assignments
 func (_m *Admin) AddPartitions(ctx context.Context, name string, assignments []client.PartitionAssignment) error {
 	ret := _m.Called(ctx, name, assignments)
@@ -27,6 +35,36 @@ func (_m *Admin) AddPartitions(ctx context.Context, name string, assignments []c
 	}
 
 	return r0
+}
+
+// Admin_AddPartitions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddPartitions'
+type Admin_AddPartitions_Call struct {
+	*mock.Call
+}
+
+// AddPartitions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - assignments []client.PartitionAssignment
+func (_e *Admin_Expecter) AddPartitions(ctx interface{}, name interface{}, assignments interface{}) *Admin_AddPartitions_Call {
+	return &Admin_AddPartitions_Call{Call: _e.mock.On("AddPartitions", ctx, name, assignments)}
+}
+
+func (_c *Admin_AddPartitions_Call) Run(run func(ctx context.Context, name string, assignments []client.PartitionAssignment)) *Admin_AddPartitions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].([]client.PartitionAssignment))
+	})
+	return _c
+}
+
+func (_c *Admin_AddPartitions_Call) Return(_a0 error) *Admin_AddPartitions_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Admin_AddPartitions_Call) RunAndReturn(run func(context.Context, string, []client.PartitionAssignment) error) *Admin_AddPartitions_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // AssignPartitions provides a mock function with given fields: ctx, name, assignments
@@ -43,6 +81,36 @@ func (_m *Admin) AssignPartitions(ctx context.Context, name string, assignments 
 	return r0
 }
 
+// Admin_AssignPartitions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AssignPartitions'
+type Admin_AssignPartitions_Call struct {
+	*mock.Call
+}
+
+// AssignPartitions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - assignments []client.PartitionAssignment
+func (_e *Admin_Expecter) AssignPartitions(ctx interface{}, name interface{}, assignments interface{}) *Admin_AssignPartitions_Call {
+	return &Admin_AssignPartitions_Call{Call: _e.mock.On("AssignPartitions", ctx, name, assignments)}
+}
+
+func (_c *Admin_AssignPartitions_Call) Run(run func(ctx context.Context, name string, assignments []client.PartitionAssignment)) *Admin_AssignPartitions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].([]client.PartitionAssignment))
+	})
+	return _c
+}
+
+func (_c *Admin_AssignPartitions_Call) Return(_a0 error) *Admin_AssignPartitions_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Admin_AssignPartitions_Call) RunAndReturn(run func(context.Context, string, []client.PartitionAssignment) error) *Admin_AssignPartitions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateTopic provides a mock function with given fields: ctx, name, assignments, configs
 func (_m *Admin) CreateTopic(ctx context.Context, name string, assignments []client.PartitionAssignment, configs map[string]string) error {
 	ret := _m.Called(ctx, name, assignments, configs)
@@ -55,6 +123,37 @@ func (_m *Admin) CreateTopic(ctx context.Context, name string, assignments []cli
 	}
 
 	return r0
+}
+
+// Admin_CreateTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateTopic'
+type Admin_CreateTopic_Call struct {
+	*mock.Call
+}
+
+// CreateTopic is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - assignments []client.PartitionAssignment
+//   - configs map[string]string
+func (_e *Admin_Expecter) CreateTopic(ctx interface{}, name interface{}, assignments interface{}, configs interface{}) *Admin_CreateTopic_Call {
+	return &Admin_CreateTopic_Call{Call: _e.mock.On("CreateTopic", ctx, name, assignments, configs)}
+}
+
+func (_c *Admin_CreateTopic_Call) Run(run func(ctx context.Context, name string, assignments []client.PartitionAssignment, configs map[string]string)) *Admin_CreateTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].([]client.PartitionAssignment), args[3].(map[string]string))
+	})
+	return _c
+}
+
+func (_c *Admin_CreateTopic_Call) Return(_a0 error) *Admin_CreateTopic_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Admin_CreateTopic_Call) RunAndReturn(run func(context.Context, string, []client.PartitionAssignment, map[string]string) error) *Admin_CreateTopic_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetBrokers provides a mock function with given fields: ctx
@@ -83,6 +182,34 @@ func (_m *Admin) GetBrokers(ctx context.Context) ([]client.BrokerInfo, error) {
 	return r0, r1
 }
 
+// Admin_GetBrokers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBrokers'
+type Admin_GetBrokers_Call struct {
+	*mock.Call
+}
+
+// GetBrokers is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *Admin_Expecter) GetBrokers(ctx interface{}) *Admin_GetBrokers_Call {
+	return &Admin_GetBrokers_Call{Call: _e.mock.On("GetBrokers", ctx)}
+}
+
+func (_c *Admin_GetBrokers_Call) Run(run func(ctx context.Context)) *Admin_GetBrokers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *Admin_GetBrokers_Call) Return(_a0 []client.BrokerInfo, _a1 error) *Admin_GetBrokers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Admin_GetBrokers_Call) RunAndReturn(run func(context.Context) ([]client.BrokerInfo, error)) *Admin_GetBrokers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetTopic provides a mock function with given fields: ctx, name
 func (_m *Admin) GetTopic(ctx context.Context, name string) (client.TopicInfo, error) {
 	ret := _m.Called(ctx, name)
@@ -107,6 +234,35 @@ func (_m *Admin) GetTopic(ctx context.Context, name string) (client.TopicInfo, e
 	return r0, r1
 }
 
+// Admin_GetTopic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTopic'
+type Admin_GetTopic_Call struct {
+	*mock.Call
+}
+
+// GetTopic is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *Admin_Expecter) GetTopic(ctx interface{}, name interface{}) *Admin_GetTopic_Call {
+	return &Admin_GetTopic_Call{Call: _e.mock.On("GetTopic", ctx, name)}
+}
+
+func (_c *Admin_GetTopic_Call) Run(run func(ctx context.Context, name string)) *Admin_GetTopic_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Admin_GetTopic_Call) Return(_a0 client.TopicInfo, _a1 error) *Admin_GetTopic_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Admin_GetTopic_Call) RunAndReturn(run func(context.Context, string) (client.TopicInfo, error)) *Admin_GetTopic_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RunLeaderElection provides a mock function with given fields: ctx, name, partitions
 func (_m *Admin) RunLeaderElection(ctx context.Context, name string, partitions []int) error {
 	ret := _m.Called(ctx, name, partitions)
@@ -121,6 +277,36 @@ func (_m *Admin) RunLeaderElection(ctx context.Context, name string, partitions 
 	return r0
 }
 
+// Admin_RunLeaderElection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunLeaderElection'
+type Admin_RunLeaderElection_Call struct {
+	*mock.Call
+}
+
+// RunLeaderElection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - partitions []int
+func (_e *Admin_Expecter) RunLeaderElection(ctx interface{}, name interface{}, partitions interface{}) *Admin_RunLeaderElection_Call {
+	return &Admin_RunLeaderElection_Call{Call: _e.mock.On("RunLeaderElection", ctx, name, partitions)}
+}
+
+func (_c *Admin_RunLeaderElection_Call) Run(run func(ctx context.Context, name string, partitions []int)) *Admin_RunLeaderElection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].([]int))
+	})
+	return _c
+}
+
+func (_c *Admin_RunLeaderElection_Call) Return(_a0 error) *Admin_RunLeaderElection_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Admin_RunLeaderElection_Call) RunAndReturn(run func(context.Context, string, []int) error) *Admin_RunLeaderElection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateTopicConfig provides a mock function with given fields: ctx, name, configs
 func (_m *Admin) UpdateTopicConfig(ctx context.Context, name string, configs map[string]string) error {
 	ret := _m.Called(ctx, name, configs)
@@ -133,6 +319,36 @@ func (_m *Admin) UpdateTopicConfig(ctx context.Context, name string, configs map
 	}
 
 	return r0
+}
+
+// Admin_UpdateTopicConfig_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateTopicConfig'
+type Admin_UpdateTopicConfig_Call struct {
+	*mock.Call
+}
+
+// UpdateTopicConfig is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - configs map[string]string
+func (_e *Admin_Expecter) UpdateTopicConfig(ctx interface{}, name interface{}, configs interface{}) *Admin_UpdateTopicConfig_Call {
+	return &Admin_UpdateTopicConfig_Call{Call: _e.mock.On("UpdateTopicConfig", ctx, name, configs)}
+}
+
+func (_c *Admin_UpdateTopicConfig_Call) Run(run func(ctx context.Context, name string, configs map[string]string)) *Admin_UpdateTopicConfig_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(map[string]string))
+	})
+	return _c
+}
+
+func (_c *Admin_UpdateTopicConfig_Call) Return(_a0 error) *Admin_UpdateTopicConfig_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Admin_UpdateTopicConfig_Call) RunAndReturn(run func(context.Context, string, map[string]string) error) *Admin_UpdateTopicConfig_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 type mockConstructorTestingTNewAdmin interface {

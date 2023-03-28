@@ -101,10 +101,8 @@ func NewTopicService(admin client.Admin, canaryConfig canary.Config, logger *zer
 func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, error) {
 	result := TopicReconcileResult{}
 
-	brokers, err := s.admin.GetBrokers(ctx)
+	brokers, err := s.getBrokers(ctx)
 	if err != nil {
-		describeClusterError.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error getting broker information")
 		return result, err
 	}
 
@@ -241,6 +239,17 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 		s.logger.Info().Msg("Ran partition leader election")
 	}
 	return nil
+}
+
+func (s *topicService) getBrokers(ctx context.Context) ([]client.BrokerInfo, error) {
+	brokers, err := s.admin.GetBrokers(ctx)
+	if err != nil {
+		describeClusterError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error getting broker information")
+		return []client.BrokerInfo{}, err
+	}
+
+	return brokers, err
 }
 
 func (s *topicService) getTopic(ctx context.Context) (*client.TopicInfo, error) {
