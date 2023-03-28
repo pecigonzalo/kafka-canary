@@ -28,7 +28,7 @@
                 gomodifytags
                 iferr
                 impl
-                go-mockery
+                pkgs-unstable.go-mockery
               ];
           };
       });
