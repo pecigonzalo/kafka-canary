@@ -198,7 +198,7 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 
 		finished := false
 		for !finished {
-			if err := s.admin.AddParitions(ctx, s.canaryConfig.Topic, assignments[currentPartitionCount:]); err != nil {
+			if err := s.admin.AddPartitions(ctx, s.canaryConfig.Topic, assignments[currentPartitionCount:]); err != nil {
 				if errors.Is(err, kafka.ReassignmentInProgress) {
 					s.logger.Warn().Msg("Unable to assign new partitions, existing modification in progress")
 					time.Sleep(5 * time.Second)

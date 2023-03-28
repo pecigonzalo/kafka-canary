@@ -239,7 +239,7 @@ func TestBrokerAdmin_GetBrokers(t *testing.T) {
 	}
 }
 
-func TestBrokerAdmin_AddParitions(t *testing.T) {
+func TestBrokerAdmin_AddPartitions(t *testing.T) {
 	mockKafkaAdminClient := mocks.NewKafkaAdminClient(t)
 	mockKafkaAdminClientWithError := mocks.NewKafkaAdminClient(t)
 
@@ -302,7 +302,7 @@ func TestBrokerAdmin_AddParitions(t *testing.T) {
 			c := &BrokerAdmin{
 				client: tt.fields.client,
 			}
-			tt.assertion(t, c.AddParitions(tt.args.ctx, tt.args.name, tt.args.assignments))
+			tt.assertion(t, c.AddPartitions(tt.args.ctx, tt.args.name, tt.args.assignments))
 		})
 	}
 }

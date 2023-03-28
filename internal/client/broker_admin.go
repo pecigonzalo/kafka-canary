@@ -8,12 +8,14 @@ import (
 )
 
 // A Kafka admin client that uses the Brokers API
+//
+//go:generate mockery --name Admin --output ../services/mocks
 type Admin interface {
 	GetTopic(ctx context.Context, name string) (TopicInfo, error)
 	CreateTopic(ctx context.Context, name string, assignments []PartitionAssignment, configs map[string]string) error
 	UpdateTopicConfig(ctx context.Context, name string, configs map[string]string) error
 	GetBrokers(ctx context.Context) ([]BrokerInfo, error)
-	AddParitions(ctx context.Context, name string, assignments []PartitionAssignment) error
+	AddPartitions(ctx context.Context, name string, assignments []PartitionAssignment) error
 	AssignPartitions(ctx context.Context, name string, assignments []PartitionAssignment) error
 	RunLeaderElection(ctx context.Context, name string, partitions []int) error
 }
@@ -159,8 +161,8 @@ func (c *BrokerAdmin) GetBrokers(ctx context.Context) ([]BrokerInfo, error) {
 	return brokerInfo, nil
 }
 
-// AddParitions adds a list of partitions to a topic
-func (c *BrokerAdmin) AddParitions(ctx context.Context, name string, assignments []PartitionAssignment) error {
+// AddPartitions adds a list of partitions to a topic
+func (c *BrokerAdmin) AddPartitions(ctx context.Context, name string, assignments []PartitionAssignment) error {
 	topicInfo, err := c.GetTopic(ctx, name)
 	if err != nil {
 		return err
