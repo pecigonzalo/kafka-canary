@@ -7,6 +7,8 @@ import (
 )
 
 // KafkaAdminClient is a kafka.Client compatible interface
+//
+//go:generate mockery --name KafkaAdminClient
 type KafkaAdminClient interface {
 	Metadata(ctx context.Context, req *kafka.MetadataRequest) (*kafka.MetadataResponse, error)
 	CreateTopics(ctx context.Context, req *kafka.CreateTopicsRequest) (*kafka.CreateTopicsResponse, error)
@@ -19,6 +21,8 @@ type KafkaAdminClient interface {
 var _ KafkaAdminClient = &kafka.Client{}
 
 // KafkaReaderClient is a kafka.Reader compatible interface
+//
+//go:generate mockery --name KafkaReaderClient
 type KafkaReaderClient interface {
 	FetchMessage(ctx context.Context) (kafka.Message, error)
 	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
@@ -28,6 +32,8 @@ type KafkaReaderClient interface {
 var _ KafkaReaderClient = &kafka.Reader{}
 
 // KafkaWriterClient is a kafka.Writer compatible interface
+//
+//go:generate mockery --name KafkaWriterClient
 type KafkaWriterClient interface {
 	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
 	Close() error

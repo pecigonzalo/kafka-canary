@@ -5,40 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/segmentio/kafka-go"
+	"github.com/pecigonzalo/kafka-canary/internal/client/mocks"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-type mockKafkaWriterClient struct {
-	err     error
-	message *kafka.Message
-}
-
-func newMockWriterClient(err error, message *kafka.Message) *mockKafkaWriterClient {
-	mock := &mockKafkaWriterClient{
-		err:     err,
-		message: getMockKafkaMessage(),
-	}
-
-	if message != nil {
-		mock.message = message
-	}
-
-	return mock
-}
-
-func (m *mockKafkaWriterClient) WriteMessages(ctx context.Context, msgs ...kafka.Message) error {
-	if m.err != nil {
-		return m.err
-	}
-	return nil
-}
-
-func (m *mockKafkaWriterClient) Close() error {
-	if m.err != nil {
-		return m.err
-	}
-	return nil
-}
 
 func TestNewProducerClient(t *testing.T) {
 	type args struct {
@@ -46,21 +16,21 @@ func TestNewProducerClient(t *testing.T) {
 		topic  string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name      string
+		args      args
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			args{
+			name: "Default",
+			args: args{
 				ConnectorConfig{BrokerAddrs: []string{"broker-1:9098"}},
 				mockTopicName,
 			},
-			false,
+			assertion: assert.NoError,
 		},
 		{
-			"BadMachanism",
-			args{
+			name: "BadMachanism",
+			args: args{
 				ConnectorConfig{
 					BrokerAddrs: []string{"broker-1:9098"},
 					SASL: SASLConfig{
@@ -70,25 +40,32 @@ func TestNewProducerClient(t *testing.T) {
 				},
 				mockTopicName,
 			},
-			true,
-		},
-	}
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewProducerClient(tt.args.config, tt.args.topic)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewProducerClient() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			tt.assertion(t, err)
 		})
 	}
 }
 
 func TestProducerClient_Write(t *testing.T) {
-	message := getMockMessage()
+	message := mockGetMessage()
 	messages := []Message{
 		*message,
 	}
+
+	mockWriterClient := mocks.NewKafkaWriterClient(t)
+	mockWriterClientWithError := mocks.NewKafkaWriterClient(t)
+
+	mockWriterClient.
+		On("WriteMessages", mock.Anything, mock.Anything).
+		Return(nil)
+
+	mockWriterClientWithError.
+		On("WriteMessages", mock.Anything, mock.Anything).
+		Return(errors.New("Some error"))
 
 	type fields struct {
 		writer KafkaWriterClient
@@ -98,64 +75,69 @@ func TestProducerClient_Write(t *testing.T) {
 		msgs []Message
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name      string
+		fields    fields
+		args      args
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			fields{newMockWriterClient(nil, nil)},
-			args{context.Background(), messages},
-			false,
+			name:      "Default",
+			fields:    fields{writer: mockWriterClient},
+			args:      args{context.Background(), messages},
+			assertion: assert.NoError,
 		},
 		{
-			"Error",
-			fields{newMockWriterClient(errors.New("Some error"), nil)},
-			args{context.Background(), messages},
-			true,
-		},
-	}
+			name:      "Error",
+			fields:    fields{writer: mockWriterClientWithError},
+			args:      args{context.Background(), messages},
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &ProducerClient{
 				writer: tt.fields.writer,
 			}
-			if err := c.Write(tt.args.ctx, tt.args.msgs...); (err != nil) != tt.wantErr {
-				t.Errorf("ProducerClient.Write() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			tt.assertion(t, c.Write(tt.args.ctx, tt.args.msgs...))
 		})
 	}
 }
 
 func TestProducerClient_Close(t *testing.T) {
+	mockWriterClient := mocks.NewKafkaWriterClient(t)
+	mockWriterClientWithError := mocks.NewKafkaWriterClient(t)
+
+	mockWriterClient.
+		On("Close", mock.Anything, mock.Anything).
+		Return(nil)
+
+	mockWriterClientWithError.
+		On("Close", mock.Anything, mock.Anything).
+		Return(errors.New("Some error"))
+
 	type fields struct {
 		writer KafkaWriterClient
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
+		name      string
+		fields    fields
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			fields{newMockWriterClient(nil, nil)},
-			false,
+			name:      "Default",
+			fields:    fields{writer: mockWriterClient},
+			assertion: assert.NoError,
 		},
 		{
-			"Error",
-			fields{newMockWriterClient(errors.New("Some error"), nil)},
-			true,
-		},
-	}
+			name:      "Error",
+			fields:    fields{writer: mockWriterClientWithError},
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := ProducerClient{
 				writer: tt.fields.writer,
 			}
-			if err := c.Close(); (err != nil) != tt.wantErr {
-				t.Errorf("ProducerClient.Close() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			tt.assertion(t, c.Close())
 		})
 	}
 }

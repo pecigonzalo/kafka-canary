@@ -3,69 +3,13 @@ package client
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
+	"github.com/pecigonzalo/kafka-canary/internal/client/mocks"
 	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-func getMockKafkaMessage() *kafka.Message {
-	return &kafka.Message{
-		Topic:     mockTopicName,
-		Partition: 0,
-		Offset:    1,
-		Value:     []byte("Fake Message"),
-	}
-}
-
-func getMockMessage() *Message {
-	kafkaMessage := getMockKafkaMessage()
-	return &Message{
-		Topic:     kafkaMessage.Topic,
-		Partition: kafkaMessage.Partition,
-		Offset:    kafkaMessage.Offset,
-		Value:     kafkaMessage.Value,
-	}
-}
-
-type mockKafkaReaderClient struct {
-	err     error
-	message *kafka.Message
-}
-
-func newMockReaderClient(err error, message *kafka.Message) *mockKafkaReaderClient {
-	mock := &mockKafkaReaderClient{
-		err:     err,
-		message: getMockKafkaMessage(),
-	}
-
-	if message != nil {
-		mock.message = message
-	}
-
-	return mock
-}
-
-func (m *mockKafkaReaderClient) FetchMessage(ctx context.Context) (kafka.Message, error) {
-	if m.err != nil {
-		return kafka.Message{}, m.err
-	}
-	return *getMockKafkaMessage(), nil
-}
-
-func (m *mockKafkaReaderClient) CommitMessages(ctx context.Context, msgs ...kafka.Message) error {
-	if m.err != nil {
-		return m.err
-	}
-	return nil
-}
-
-func (m *mockKafkaReaderClient) Close() error {
-	if m.err != nil {
-		return m.err
-	}
-	return nil
-}
 
 func TestNewConsumerClient(t *testing.T) {
 	type args struct {
@@ -74,22 +18,22 @@ func TestNewConsumerClient(t *testing.T) {
 		consumerGroupID string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name      string
+		args      args
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			args{
+			name: "Default",
+			args: args{
 				ConnectorConfig{BrokerAddrs: []string{"broker-1:9098"}},
 				mockTopicName,
 				"test-group",
 			},
-			false,
+			assertion: assert.NoError,
 		},
 		{
-			"BadMachanism",
-			args{
+			name: "BadMachanism",
+			args: args{
 				ConnectorConfig{
 					BrokerAddrs: []string{"broker-1:9098"},
 					SASL: SASLConfig{
@@ -100,21 +44,30 @@ func TestNewConsumerClient(t *testing.T) {
 				mockTopicName,
 				"test-group",
 			},
-			true,
-		},
-	}
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewConsumerClient(tt.args.config, tt.args.topic, tt.args.consumerGroupID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewConsumerClient() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			tt.assertion(t, err)
 		})
 	}
 }
 
 func TestConsumerClient_Fetch(t *testing.T) {
+	kafkaMessage := mockGetKafkaMessage()
+
+	mockReaderClient := mocks.NewKafkaReaderClient(t)
+	mockReaderClientWithError := mocks.NewKafkaReaderClient(t)
+
+	mockReaderClient.
+		On("FetchMessage", mock.Anything).
+		Return(*kafkaMessage, nil)
+
+	mockReaderClientWithError.
+		On("FetchMessage", mock.Anything).
+		Return(kafka.Message{}, errors.New("Some error"))
+
 	type fields struct {
 		reader KafkaReaderClient
 	}
@@ -122,49 +75,54 @@ func TestConsumerClient_Fetch(t *testing.T) {
 		ctx context.Context
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *Message
-		wantErr bool
+		name      string
+		fields    fields
+		args      args
+		want      *Message
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			fields{newMockReaderClient(nil, nil)},
-			args{context.Background()},
-			getMockMessage(),
-			false,
+			name:      "Default",
+			fields:    fields{mockReaderClient},
+			args:      args{context.Background()},
+			want:      mockGetMessage(),
+			assertion: assert.NoError,
 		},
 		{
-			"Error",
-			fields{newMockReaderClient(errors.New("Some error"), nil)},
-			args{context.Background()},
-			nil,
-			true,
-		},
-	}
+			name:      "Error",
+			fields:    fields{mockReaderClientWithError},
+			args:      args{context.Background()},
+			want:      nil,
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &ConsumerClient{
 				reader: tt.fields.reader,
 			}
 			got, err := c.Fetch(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ConsumerClient.Fetch() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ConsumerClient.Fetch() = %v, want %v", got, tt.want)
-			}
+			tt.assertion(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestConsumerClient_Commit(t *testing.T) {
-	message := getMockMessage()
+	message := mockGetMessage()
 	messages := []*Message{
 		message,
 	}
+
+	mockReaderClient := mocks.NewKafkaReaderClient(t)
+	mockReaderClientWithError := mocks.NewKafkaReaderClient(t)
+
+	mockReaderClient.
+		On("CommitMessages", mock.Anything, mock.Anything).
+		Return(nil)
+
+	mockReaderClientWithError.
+		On("CommitMessages", mock.Anything, mock.Anything).
+		Return(errors.New("Some error"))
 
 	type fields struct {
 		reader KafkaReaderClient
@@ -174,54 +132,62 @@ func TestConsumerClient_Commit(t *testing.T) {
 		msgs []*Message
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name      string
+		fields    fields
+		args      args
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			fields{newMockReaderClient(nil, nil)},
-			args{context.Background(), messages},
-			false,
+			name:      "Default",
+			fields:    fields{mockReaderClient},
+			args:      args{context.Background(), messages},
+			assertion: assert.NoError,
 		},
 		{
-			"Error",
-			fields{newMockReaderClient(errors.New("Some error"), nil)},
-			args{context.Background(), messages},
-			true,
-		},
-	}
+			name:      "Error",
+			fields:    fields{mockReaderClientWithError},
+			args:      args{context.Background(), messages},
+			assertion: assert.Error,
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &ConsumerClient{
 				reader: tt.fields.reader,
 			}
-			if err := c.Commit(tt.args.ctx, tt.args.msgs...); (err != nil) != tt.wantErr {
-				t.Errorf("ConsumerClient.Commit() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			tt.assertion(t, c.Commit(tt.args.ctx, tt.args.msgs...))
 		})
 	}
 }
 
 func TestConsumerClient_Close(t *testing.T) {
+	mockReaderClient := mocks.NewKafkaReaderClient(t)
+	mockReaderClientWithError := mocks.NewKafkaReaderClient(t)
+
+	mockReaderClient.
+		On("Close").
+		Return(nil)
+
+	mockReaderClientWithError.
+		On("Close").
+		Return(errors.New("Some error"))
+
 	type fields struct {
 		reader KafkaReaderClient
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
+		name      string
+		fields    fields
+		assertion assert.ErrorAssertionFunc
 	}{
 		{
-			"Default",
-			fields{newMockReaderClient(nil, nil)},
-			false,
+			name:      "Default",
+			fields:    fields{mockReaderClient},
+			assertion: assert.NoError,
 		},
 		{
-			"Error",
-			fields{newMockReaderClient(errors.New("Some error"), nil)},
-			true,
+			name:      "Error",
+			fields:    fields{mockReaderClientWithError},
+			assertion: assert.Error,
 		},
 	}
 	for _, tt := range tests {
@@ -229,9 +195,7 @@ func TestConsumerClient_Close(t *testing.T) {
 			c := &ConsumerClient{
 				reader: tt.fields.reader,
 			}
-			if err := c.Close(); (err != nil) != tt.wantErr {
-				t.Errorf("ConsumerClient.Close() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			tt.assertion(t, c.Close())
 		})
 	}
 }

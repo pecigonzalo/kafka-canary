@@ -1,16 +1,20 @@
-.PHONY build:
+.PHONY: build
 build:
 	go build -v ./cmd/kafka-canary
 
-.PHONY test:
+.PHONY: test
 test:
 	go test -v -cover -race ./...
 
-.PHONY fmt:
+.PHONY: fmt
 fmt:
 	gofmt -l -s -w ./
 	goimports -l --local "github.com/pecigonzalo/kafka-canary" -w ./
 
-.PHONY lint:
+.PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: generate
+generate:
+	generate ./...
