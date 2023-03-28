@@ -71,19 +71,33 @@ func main() {
 	httpServer, healthy, ready := srv.ListenAndServe()
 
 	connectorConfig := client.ConnectorConfig{
+		ClientID:    config.Canary.ClientID,
 		BrokerAddrs: config.Kafka.BrokerAddrs,
 		TLS:         config.Kafka.TLS,
 		SASL:        config.Kafka.SASL,
 	}
 
-	topicService := services.NewTopicService(config.Canary, connectorConfig, &logger)
-	producerService := services.NewProducerService(config.Canary, connectorConfig, &logger)
-	consumerService := services.NewConsumerService(config.Canary, connectorConfig, &logger)
-	connectionService := services.NewConnectionService(config.Canary, connectorConfig)
-	statusService := services.NewStatusServiceService(config.Canary, &logger)
+	admin, err := client.NewBrokerAdmin(connectorConfig)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create broker admin client")
+	}
+	topicService := services.NewTopicService(admin, config.Canary, &logger)
+
+	consumer, err := client.NewConsumerClient(connectorConfig, config.Canary.Topic, config.Canary.ConsumerGroupID)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create connector")
+	}
+
+	consumerService := services.NewConsumerService(consumer, config.Canary, &logger)
+
+	producer, err := client.NewProducerClient(connectorConfig, config.Canary.Topic)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Unable to create connector")
+	}
+	producerService := services.NewProducerService(producer, config.Canary, &logger)
 
 	// start canary manager
-	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, connectionService, statusService, &logger)
+	canaryManager := workers.NewCanaryManager(config.Canary, topicService, producerService, consumerService, &logger)
 	canaryManager.Start(ctx)
 
 	// graceful shutdown

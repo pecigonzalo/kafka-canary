@@ -20,30 +20,28 @@ type Worker interface {
 
 // CanaryManager defines the manager driving the different producer, consumer and topic services
 type CanaryManager struct {
-	canaryConfig      *canary.Config
-	topicService      services.TopicService
-	producerService   services.ProducerService
-	consumerService   services.ConsumerService
-	connectionService services.ConnectionService
-	statusService     services.StatusService
-	stop              chan struct{}
-	syncStop          sync.WaitGroup
-	logger            *zerolog.Logger
+	canaryConfig    *canary.Config
+	topicService    services.TopicService
+	producerService services.ProducerService
+	consumerService services.ConsumerService
+	stop            chan struct{}
+	syncStop        sync.WaitGroup
+	logger          *zerolog.Logger
 }
 
 // NewCanaryManager returns an instance of the cananry manager worker
 func NewCanaryManager(canaryConfig canary.Config,
-	topicService services.TopicService, producerService services.ProducerService,
-	consumerService services.ConsumerService, connectionService services.ConnectionService,
-	statusService services.StatusService, logger *zerolog.Logger) Worker {
+	topicService services.TopicService,
+	producerService services.ProducerService,
+	consumerService services.ConsumerService,
+	logger *zerolog.Logger,
+) Worker {
 	cm := CanaryManager{
-		canaryConfig:      &canaryConfig,
-		topicService:      topicService,
-		producerService:   producerService,
-		consumerService:   consumerService,
-		connectionService: connectionService,
-		statusService:     statusService,
-		logger:            logger,
+		canaryConfig:    &canaryConfig,
+		topicService:    topicService,
+		producerService: producerService,
+		consumerService: consumerService,
+		logger:          logger,
 	}
 	return &cm
 }
@@ -54,9 +52,6 @@ func (cm *CanaryManager) Start(ctx context.Context) {
 
 	cm.stop = make(chan struct{})
 	cm.syncStop.Add(1)
-
-	cm.connectionService.Open()
-	cm.statusService.Open()
 
 	_, err := cm.topicService.Reconcile(ctx)
 	if err != nil {
@@ -93,8 +88,6 @@ func (cm *CanaryManager) Stop() {
 	cm.producerService.Close()
 	cm.consumerService.Close()
 	cm.topicService.Close()
-	cm.connectionService.Close()
-	cm.statusService.Close()
 
 	cm.logger.Info().Msg("Canary manager closed")
 }

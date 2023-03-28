@@ -28,6 +28,11 @@ var (
 	alterTopicConfigurationError *prometheus.CounterVec
 )
 
+type TopicService interface {
+	Reconcile(context.Context) (TopicReconcileResult, error)
+	Close()
+}
+
 // TopicReconcileResult contains the result of a topic reconcile
 type TopicReconcileResult struct {
 	// new partitions assignments across brokers
@@ -39,14 +44,13 @@ type TopicReconcileResult struct {
 }
 
 type topicService struct {
-	initialized     bool
-	client          *client.Connector
-	canaryConfig    *canary.Config
-	connectorConfig *client.ConnectorConfig
-	logger          *zerolog.Logger
+	initialized  bool
+	admin        client.Admin
+	canaryConfig *canary.Config
+	logger       *zerolog.Logger
 }
 
-func NewTopicService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) TopicService {
+func NewTopicService(admin client.Admin, canaryConfig canary.Config, logger *zerolog.Logger) TopicService {
 	topicCreationFailed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:        "topic_creation_failed_total",
 		Namespace:   metricsNamespace,
@@ -86,33 +90,21 @@ func NewTopicService(canaryConfig canary.Config, connectorConfig client.Connecto
 		Str("topic", canaryConfig.Topic).
 		Logger()
 
-	client, err := client.NewConnector(connectorConfig)
-	if err != nil {
-		serviceLogger.Fatal().Err(err).Msg("Error creating topic service client")
-	}
-	serviceLogger.Info().Msg("Created topic service client")
-
 	return &topicService{
-		initialized:     false,
-		client:          client,
-		canaryConfig:    &canaryConfig,
-		connectorConfig: &connectorConfig,
-		logger:          &serviceLogger,
+		initialized:  false,
+		admin:        admin,
+		canaryConfig: &canaryConfig,
+		logger:       &serviceLogger,
 	}
 }
 
 func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, error) {
 	result := TopicReconcileResult{}
 
-	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{})
+	brokers, err := s.getBrokers(ctx)
 	if err != nil {
-		describeClusterError.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error getting broker IDs")
 		return result, err
 	}
-
-	var brokers []kafka.Broker
-	brokers = append(brokers, resp.Brokers...)
 
 	topic, err := s.getTopic(ctx)
 	if err != nil {
@@ -128,7 +120,7 @@ func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, err
 
 	// Configure the topic if first run
 	if !s.initialized {
-		if err = s.reconcileConfiguration(ctx); err != nil {
+		if err = s.reconcileConfiguration(ctx, brokers); err != nil {
 			return result, err
 		}
 	}
@@ -157,7 +149,7 @@ func (s *topicService) Reconcile(ctx context.Context) (TopicReconcileResult, err
 
 	leaders := map[int]int{}
 	for _, partition := range topic.Partitions {
-		leaders[partition.ID] = partition.Leader.ID
+		leaders[partition.ID] = partition.Leader
 	}
 	result.Leaders = leaders
 
@@ -170,10 +162,15 @@ func (s topicService) Close() {
 	s.logger.Info().Msg("Service closed")
 }
 
-func (s *topicService) reconcileConfiguration(ctx context.Context) error {
-	err := s.updateTopicConfig(ctx, s.canaryConfig.Topic, []kafka.ConfigEntry{
-		{},
-	})
+func (s *topicService) reconcileConfiguration(ctx context.Context, brokers []client.BrokerInfo) error {
+	brokersNumber := len(brokers)
+	replicationFactor := min(brokersNumber, 3)
+	configs := map[string]string{
+		"cleanup.policy":      cleanupPolicy,
+		"min.insync.replicas": strconv.Itoa(replicationFactor),
+	}
+
+	err := s.admin.UpdateTopicConfig(ctx, s.canaryConfig.Topic, configs)
 	if err != nil {
 		alterTopicConfigurationError.WithLabelValues().Inc()
 		s.logger.Error().Err(err).Msg("Error altering topic configuration")
@@ -182,14 +179,14 @@ func (s *topicService) reconcileConfiguration(ctx context.Context) error {
 	return nil
 }
 
-func (s *topicService) reconcilePartitions(ctx context.Context, currentPartitions []kafka.Partition, brokers []kafka.Broker) error {
+func (s *topicService) reconcilePartitions(ctx context.Context, currentPartitions []client.PartitionAssignment, brokers []client.BrokerInfo) error {
 	brokersNumber := len(brokers)
 	currentPartitionCount := len(currentPartitions)
 	assignments := s.requestAssignments(ctx, currentPartitionCount, brokers)
 
 	// If we have less partitions than brokers scale up, else assign
 	if currentPartitionCount < brokersNumber {
-		if err := s.assignPartitions(ctx, s.canaryConfig.Topic, assignments[:currentPartitionCount]); err != nil {
+		if err := s.admin.AssignPartitions(ctx, s.canaryConfig.Topic, assignments[:currentPartitionCount]); err != nil {
 			alterTopicAssignmentsError.WithLabelValues().Inc()
 			s.logger.Error().Err(err).Msg("Unable to assign partitions")
 			return err
@@ -199,7 +196,7 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 
 		finished := false
 		for !finished {
-			if err := s.addPartitions(ctx, s.canaryConfig.Topic, assignments[currentPartitionCount:]); err != nil {
+			if err := s.admin.AddPartitions(ctx, s.canaryConfig.Topic, assignments[currentPartitionCount:]); err != nil {
 				if errors.Is(err, kafka.ReassignmentInProgress) {
 					s.logger.Warn().Msg("Unable to assign new partitions, existing modification in progress")
 					time.Sleep(5 * time.Second)
@@ -214,7 +211,7 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 			finished = true
 		}
 	} else {
-		if err := s.assignPartitions(ctx, s.canaryConfig.Topic, assignments); err != nil {
+		if err := s.admin.AssignPartitions(ctx, s.canaryConfig.Topic, assignments); err != nil {
 			alterTopicAssignmentsError.WithLabelValues().Inc()
 			s.logger.Error().Err(err).Msg("Unable to assign partitions")
 			return err
@@ -235,7 +232,7 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 	}
 
 	// Run election to balanance leaders
-	if err := s.electLeaders(ctx, s.canaryConfig.Topic, currentPartitionIDs); err != nil {
+	if err := s.admin.RunLeaderElection(ctx, s.canaryConfig.Topic, currentPartitionIDs); err != nil {
 		s.logger.Error().Err(err).Msg("Error running leader election")
 		return err
 	} else {
@@ -244,52 +241,39 @@ func (s *topicService) reconcilePartitions(ctx context.Context, currentPartition
 	return nil
 }
 
-func (s *topicService) getTopic(ctx context.Context) (kafka.Topic, error) {
-	resp, err := s.client.KafkaClient.Metadata(ctx, &kafka.MetadataRequest{
-		Topics: []string{s.canaryConfig.Topic},
-	})
-
+func (s *topicService) getBrokers(ctx context.Context) ([]client.BrokerInfo, error) {
+	brokers, err := s.admin.GetBrokers(ctx)
 	if err != nil {
-		return kafka.Topic{}, err
+		describeClusterError.WithLabelValues().Inc()
+		s.logger.Error().Err(err).Msg("Error getting broker information")
+		return []client.BrokerInfo{}, err
 	}
 
-	topic := resp.Topics[0]
-	if topic.Error != nil {
-		describeTopicError.WithLabelValues().Inc()
-		s.logger.Warn().Err(topic.Error).Msg("Error describing topic")
-		return topic, topic.Error
-	}
-	return topic, nil
+	return brokers, err
 }
 
-func (s *topicService) createTopic(ctx context.Context, brokers []kafka.Broker) error {
-	brokersNumber := len(brokers)
-	replicationFactor := min(brokersNumber, 3)
-	assignments := s.requestAssignments(ctx, 0, brokers)
-
-	var replicaAssignments []kafka.ReplicaAssignment
-	replicaAssignments = append(replicaAssignments, assignments...)
-
-	resp, err := s.client.KafkaClient.CreateTopics(ctx, &kafka.CreateTopicsRequest{
-		Topics: []kafka.TopicConfig{{
-			Topic:              s.canaryConfig.Topic,
-			NumPartitions:      -1,
-			ReplicationFactor:  -1,
-			ReplicaAssignments: replicaAssignments,
-			ConfigEntries: []kafka.ConfigEntry{
-				{ConfigName: "cleanup.policy", ConfigValue: cleanupPolicy},
-				{ConfigName: "min.insync.replicas", ConfigValue: strconv.Itoa(replicationFactor)},
-			},
-		}},
-	})
-
+func (s *topicService) getTopic(ctx context.Context) (*client.TopicInfo, error) {
+	topicInfo, err := s.admin.GetTopic(ctx, s.canaryConfig.Topic)
 	if err != nil {
-		topicCreationFailed.WithLabelValues().Inc()
-		s.logger.Error().Err(err).Msg("Error creating the topic")
-		return err
+		describeTopicError.WithLabelValues().Inc()
+		s.logger.Warn().Err(err).Msg("Error describing topic")
+		return nil, err
 	}
 
-	if err = client.KafkaErrorsToErr(resp.Errors); err != nil {
+	return &topicInfo, nil
+}
+
+func (s *topicService) createTopic(ctx context.Context, brokers []client.BrokerInfo) error {
+	brokersNumber := len(brokers)
+	replicationFactor := min(brokersNumber, 3)
+
+	assignments := s.requestAssignments(ctx, 0, brokers)
+	configs := map[string]string{
+		"cleanup.policy":      cleanupPolicy,
+		"min.insync.replicas": strconv.Itoa(replicationFactor),
+	}
+
+	if err := s.admin.CreateTopic(ctx, s.canaryConfig.Topic, assignments, configs); err != nil {
 		topicCreationFailed.WithLabelValues().Inc()
 		s.logger.Error().Err(err).Msg("Error creating the topic")
 		return err
@@ -299,109 +283,7 @@ func (s *topicService) createTopic(ctx context.Context, brokers []kafka.Broker) 
 	return nil
 }
 
-func (s *topicService) addPartitions(ctx context.Context, topic string, assignments []kafka.ReplicaAssignment) error {
-	topicInfo, err := s.getTopic(ctx)
-	if err != nil {
-		return err
-	}
-
-	topicPartitions := kafka.TopicPartitionsConfig{
-		Name:  topic,
-		Count: int32(len(assignments)) + int32(len(topicInfo.Partitions)),
-	}
-
-	var partitionAssignments []kafka.TopicPartitionAssignment
-	for _, assignment := range assignments {
-		brokerIDsInt32 := []int32{}
-		for _, replica := range assignment.Replicas {
-			brokerIDsInt32 = append(brokerIDsInt32, int32(replica))
-		}
-
-		partitionAssignments = append(
-			partitionAssignments,
-			kafka.TopicPartitionAssignment{
-				BrokerIDs: brokerIDsInt32,
-			},
-		)
-	}
-	topicPartitions.TopicPartitionAssignments = partitionAssignments
-
-	resp, err := s.client.KafkaClient.CreatePartitions(ctx, &kafka.CreatePartitionsRequest{
-		Topics: []kafka.TopicPartitionsConfig{topicPartitions},
-	})
-	if err != nil {
-		return err
-	}
-	if err = client.KafkaErrorsToErr(resp.Errors); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *topicService) assignPartitions(ctx context.Context, topic string, assignments []kafka.ReplicaAssignment) error {
-	var requestAssignments []kafka.AlterPartitionReassignmentsRequestAssignment
-
-	for _, assignment := range assignments {
-		var brokerIDs []int
-		brokerIDs = append(brokerIDs, assignment.Replicas...)
-		requestAssignments = append(requestAssignments, kafka.AlterPartitionReassignmentsRequestAssignment{
-			PartitionID: assignment.Partition,
-			BrokerIDs:   brokerIDs,
-		})
-	}
-
-	resp, err := s.client.KafkaClient.AlterPartitionReassignments(ctx, &kafka.AlterPartitionReassignmentsRequest{
-		Topic:       topic,
-		Assignments: requestAssignments,
-	})
-	if err != nil {
-		return err
-	}
-	if err = resp.Error; err != nil {
-		return err
-	}
-	if err = client.AlterPartitionReassignmentsRequestAssignmentError(resp.PartitionResults); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *topicService) electLeaders(ctx context.Context, topic string, partitions []int) error {
-	resp, err := s.client.KafkaClient.ElectLeaders(ctx, &kafka.ElectLeadersRequest{
-		Topic:      topic,
-		Partitions: partitions,
-	})
-	if err != nil {
-		return err
-	}
-	if err = resp.Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *topicService) updateTopicConfig(ctx context.Context, topic string, configEntries []kafka.ConfigEntry) error {
-	resp, err := s.client.KafkaClient.IncrementalAlterConfigs(ctx, &kafka.IncrementalAlterConfigsRequest{
-		Resources: []kafka.IncrementalAlterConfigsRequestResource{{
-			ResourceType: kafka.ResourceTypeTopic,
-			ResourceName: topic,
-			Configs:      configEntriesToAPIConfigs(configEntries),
-		}},
-	})
-	if err != nil {
-		return err
-	}
-	if err = client.IncrementalAlterConfigsResponseResourcesError(resp.Resources); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *topicService) requestAssignments(ctx context.Context, currentPartitions int, brokers []kafka.Broker) []kafka.ReplicaAssignment {
+func (s *topicService) requestAssignments(ctx context.Context, currentPartitions int, brokers []client.BrokerInfo) []client.PartitionAssignment {
 	brokersNumber := len(brokers)
 	partitions := max(currentPartitions, brokersNumber)
 	replicationFactor := min(brokersNumber, 3)
@@ -411,7 +293,7 @@ func (s *topicService) requestAssignments(ctx context.Context, currentPartitions
 		return brokers[i].ID < brokers[j].ID
 	})
 
-	rackMap := make(map[string][]kafka.Broker)
+	rackMap := make(map[string][]client.BrokerInfo)
 	var rackNames []string
 	brokersWithRack := 0
 
@@ -419,7 +301,7 @@ func (s *topicService) requestAssignments(ctx context.Context, currentPartitions
 		if broker.Rack != "" {
 			brokersWithRack++
 			if _, ok := rackMap[broker.Rack]; !ok {
-				rackMap[broker.Rack] = make([]kafka.Broker, 0)
+				rackMap[broker.Rack] = make([]client.BrokerInfo, 0)
 				rackNames = append(rackNames, broker.Rack)
 			}
 			rackMap[broker.Rack] = append(rackMap[broker.Rack], broker)
@@ -439,7 +321,7 @@ func (s *topicService) requestAssignments(ctx context.Context, currentPartitions
 				for _, rackName := range rackNames {
 					brokerList := rackMap[rackName]
 					if len(brokerList) > 0 {
-						var head kafka.Broker
+						var head client.BrokerInfo
 						head, rackMap[rackName] = brokerList[0], brokerList[1:]
 						brokers[index] = head
 						index++
@@ -454,15 +336,15 @@ func (s *topicService) requestAssignments(ctx context.Context, currentPartitions
 		}
 	}
 
-	assignments := []kafka.ReplicaAssignment{}
+	assignments := []client.PartitionAssignment{}
 	for p := 0; p < partitions; p++ {
 		replicas := []int{}
 		for r := 0; r < replicationFactor; r++ {
 			replicas = append(replicas, r+1)
 		}
-		assignments = append(assignments, kafka.ReplicaAssignment{
-			Partition: p,
-			Replicas:  replicas,
+		assignments = append(assignments, client.PartitionAssignment{
+			ID:       p,
+			Replicas: replicas,
 		})
 	}
 
@@ -486,30 +368,4 @@ func min(x, y int) int {
 		return y
 	}
 	return x
-}
-
-func configEntriesToAPIConfigs(
-	configEntries []kafka.ConfigEntry,
-) []kafka.IncrementalAlterConfigsRequestConfig {
-	apiConfigs := []kafka.IncrementalAlterConfigsRequestConfig{}
-	for _, entry := range configEntries {
-		var op kafka.ConfigOperation
-
-		if entry.ConfigValue == "" {
-			op = kafka.ConfigOperationDelete
-		} else {
-			op = kafka.ConfigOperationSet
-		}
-
-		apiConfigs = append(
-			apiConfigs,
-			kafka.IncrementalAlterConfigsRequestConfig{
-				Name:            entry.ConfigName,
-				Value:           entry.ConfigValue,
-				ConfigOperation: op,
-			},
-		)
-	}
-
-	return apiConfigs
 }

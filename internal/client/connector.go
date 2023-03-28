@@ -30,6 +30,7 @@ const (
 
 // ConnectorConfig contains the configuration used to contruct a connector.
 type ConnectorConfig struct {
+	ClientID    string     `mapstructure:"client-id"`
 	BrokerAddrs []string   `mapstructure:"broker-addrs"`
 	TLS         TLSConfig  `mapstructure:"tls"`
 	SASL        SASLConfig `mapstructure:"sasl"`
@@ -69,6 +70,11 @@ func NewConnector(config ConnectorConfig) (*Connector, error) {
 	var mechanismClient sasl.Mechanism
 	var tlsConfig *tls.Config
 	var err error
+	var clientID string
+
+	if config.ClientID != "" {
+		clientID = config.ClientID
+	}
 
 	if config.SASL.Enabled {
 		switch config.SASL.Mechanism {
@@ -144,6 +150,7 @@ func NewConnector(config ConnectorConfig) (*Connector, error) {
 			ServerName:         config.TLS.ServerName,
 		}
 		connector.Dialer = &kafka.Dialer{
+			ClientID:      clientID,
 			SASLMechanism: mechanismClient,
 			Timeout:       10 * time.Second,
 			TLS:           tlsConfig,

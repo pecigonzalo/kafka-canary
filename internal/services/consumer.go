@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
-	"github.com/segmentio/kafka-go"
 
 	"github.com/pecigonzalo/kafka-canary/internal/canary"
 	"github.com/pecigonzalo/kafka-canary/internal/client"
@@ -22,16 +21,19 @@ var (
 	recordsEndToEndLatency *prometheus.HistogramVec
 )
 
-type consumerService struct {
-	client          *client.Connector
-	consumer        *kafka.Reader
-	canaryConfig    *canary.Config
-	connectorConfig *client.ConnectorConfig
-	logger          *zerolog.Logger
-	cancel          context.CancelFunc
+type ConsumerService interface {
+	Consume(context.Context)
+	Close()
 }
 
-func NewConsumerService(canaryConfig canary.Config, connectorConfig client.ConnectorConfig, logger *zerolog.Logger) ConsumerService {
+type consumerService struct {
+	client       client.Consumer
+	canaryConfig *canary.Config
+	logger       *zerolog.Logger
+	cancel       context.CancelFunc
+}
+
+func NewConsumerService(client client.Consumer, canaryConfig canary.Config, logger *zerolog.Logger) ConsumerService {
 	recordsConsumed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name:        "records_consumed_total",
 		Namespace:   metricsNamespace,
@@ -60,29 +62,10 @@ func NewConsumerService(canaryConfig canary.Config, connectorConfig client.Conne
 		Str("consumerGroup", canaryConfig.ConsumerGroupID).
 		Logger()
 
-	client, err := client.NewConnector(connectorConfig)
-	if err != nil {
-		serviceLogger.Fatal().Err(err).Msg("Error creating consumer service client")
-	}
-	client.Dialer.ClientID = canaryConfig.ClientID
-	serviceLogger.Info().Msg("Created consumer service client")
-
-	consumer := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:               client.Config.BrokerAddrs,
-		Dialer:                client.Dialer,
-		GroupID:               canaryConfig.ConsumerGroupID,
-		Topic:                 canaryConfig.Topic,
-		StartOffset:           kafka.LastOffset,
-		WatchPartitionChanges: true,
-	})
-	logger.Info().Msg("Created consumer service reader")
-
 	return &consumerService{
-		client:          client,
-		consumer:        consumer,
-		canaryConfig:    &canaryConfig,
-		connectorConfig: &connectorConfig,
-		logger:          &serviceLogger,
+		client:       client,
+		canaryConfig: &canaryConfig,
+		logger:       &serviceLogger,
 	}
 }
 
@@ -90,20 +73,17 @@ func (s *consumerService) Consume(ctx context.Context) {
 	ctx, s.cancel = context.WithCancel(ctx)
 	go func() {
 		for {
-			message, err := s.consumer.FetchMessage(ctx)
+			message, err := s.client.Fetch(ctx)
 			timestamp := time.Now().UnixMilli()
 			s.logger.Debug().
 				Int("partition", message.Partition).
 				Int64("offset", message.Offset).
 				Msg("Message read")
 			if err != nil {
-				partition := s.consumer.Config().Partition
-
 				if client.IsDisconnection(err) {
 					// These errors are recoverable, just try again
 					s.logger.Warn().Err(err).Msgf(
-						"Got connection error reading from partition %d, retrying: %+v",
-						partition,
+						"Got connection error reading message retrying: %+v",
 						err,
 					)
 					continue
@@ -117,7 +97,7 @@ func (s *consumerService) Consume(ctx context.Context) {
 				}
 			}
 
-			if err = s.consumer.CommitMessages(ctx, message); err != nil {
+			if err = s.client.Commit(ctx, message); err != nil {
 				s.logger.Error().Err(err).Msg("Error commiting message")
 				continue
 			}
@@ -156,7 +136,7 @@ func (s *consumerService) Consume(ctx context.Context) {
 func (s *consumerService) Close() {
 	s.logger.Info().Msg("Service closing")
 	s.cancel()
-	err := s.consumer.Close()
+	err := s.client.Close()
 	if err != nil {
 		s.logger.Fatal().Err(err).Msg("Error while closing")
 	}
