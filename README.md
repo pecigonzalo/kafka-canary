@@ -14,12 +14,12 @@ The `kafka-go` library provides a better interface than `sarama` which is used b
 - [ ] Tests
   - [x] Client interface
   - [ ] Service behaviour
-    - [ ] Expected metrics increase
-    - [ ] Expected handling
-      - [ ] Topics does not exist
-      - [ ] Topic partitions diff
-      - [ ] Topic config diff
-      - [ ] Topic change
+    - [x] Expected metrics increase
+    - [x] Expected handling
+      - [x] Topics does not exist
+      - [x] Topic partitions diff
+      - [x] Topic config diff
+      - [x] Topic change
   - [ ] Integration tests
 - [x] Implement core monitors
   - [x] Topic activities
