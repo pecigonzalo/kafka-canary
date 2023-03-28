@@ -35,7 +35,9 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: true
-      - run: go generate ./...
+      - run: |
+          go install github.com/vektra/mockery/v2@v2.20.0
+          go generate ./...
       - name: git diff
         run: |
           git diff --compact-summary --exit-code || \

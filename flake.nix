@@ -22,6 +22,13 @@
                 gopls
                 goreleaser
                 gnumake
+                reftools
+                ginkgo
+                gotools
+                gomodifytags
+                iferr
+                impl
+                go-mockery
               ];
           };
       });
