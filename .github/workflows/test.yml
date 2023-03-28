@@ -31,13 +31,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
         with:
-          go-version-file: "go.mod"
-          cache: true
-      - run: |
-          go install github.com/vektra/mockery/v2@v2.20.0
-          go generate ./...
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - uses: workflow/nix-shell-action@v3
+        with:
+          flakes: .#
+          script: |
+            go generate ./...
       - name: git diff
         run: |
           git diff --compact-summary --exit-code || \
