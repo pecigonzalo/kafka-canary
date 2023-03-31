@@ -4,6 +4,10 @@ metadata:
   name: {{ include "kafka-canary.fullname" . }}-service # We need a suffix to avoid polluting the service env-vars
   labels:
     {{- include "kafka-canary.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
