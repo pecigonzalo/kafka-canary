@@ -27,6 +27,7 @@ func NewProducerClient(config ConnectorConfig, topic string) (*ProducerClient, e
 		Addr:      kafka.TCP(connector.Config.BrokerAddrs...),
 		Transport: connector.KafkaClient.Transport,
 		Topic:     topic,
+		BatchSize: 1, // We always want to write 1 by 1 for this client, as its use for canary
 	}
 
 	return &ProducerClient{
