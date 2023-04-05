@@ -75,10 +75,6 @@ func (s *consumerService) Consume(ctx context.Context) {
 		for {
 			message, err := s.client.Fetch(ctx)
 			timestamp := time.Now().UnixMilli()
-			s.logger.Debug().
-				Int("partition", message.Partition).
-				Int64("offset", message.Offset).
-				Msg("Message read")
 			if err != nil {
 				if client.IsDisconnection(err) {
 					// These errors are recoverable, just try again
@@ -96,6 +92,10 @@ func (s *consumerService) Consume(ctx context.Context) {
 					continue
 				}
 			}
+			s.logger.Debug().
+				Int("partition", message.Partition).
+				Int64("offset", message.Offset).
+				Msg("Message read")
 
 			if err = s.client.Commit(ctx, message); err != nil {
 				s.logger.Error().Err(err).Msg("Error commiting message")
