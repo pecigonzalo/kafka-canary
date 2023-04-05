@@ -128,8 +128,6 @@ func setupFlags() *pflag.FlagSet {
 		"e2e latency buckets",
 	)
 	fs.Duration("canary.reconcile-interval", 5*time.Second, "Reconcile interval")
-	fs.Int("canary.bootstrap-backoff-max-attempts", 10, "Bootstrap backoff max attempts")
-	fs.Duration("canary.bootstrap-backoff-scale", 5*time.Second, "Bootstrap backoff scale")
 
 	return fs
 }
