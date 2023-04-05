@@ -119,12 +119,12 @@ func setupFlags() *pflag.FlagSet {
 	fs.String("canary.consumer-group-id", "kafka-canary-group", "Id of the consumer group used by the canary")
 	fs.StringSlice(
 		"canary.producer-latency-buckets",
-		[]string{"100", "500", "1000", "1500", "2000", "4000", "8000"},
+		[]string{"2", "5", "10", "20", "50", "100", "200", "400"},
 		"Producer latency buckets",
 	)
 	fs.StringSlice(
 		"canary.endtoend-latency-buckets",
-		[]string{"100", "500", "1000", "2000", "8000", "10000", "12000", "15000"},
+		[]string{"5", "10", "20", "50", "100", "200", "400", "800"},
 		"e2e latency buckets",
 	)
 	fs.Duration("canary.reconcile-interval", 5*time.Second, "Reconcile interval")
