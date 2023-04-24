@@ -149,7 +149,7 @@ func parseConfigFile() {
 
 func parseEnvVariables() {
 	viper.SetEnvPrefix("KAFKA_CANARY")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	viper.AutomaticEnv()
 }
 
