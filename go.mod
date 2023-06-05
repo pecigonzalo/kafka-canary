@@ -3,7 +3,7 @@ module github.com/pecigonzalo/kafka-canary
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.44.271
+	github.com/aws/aws-sdk-go v1.44.275
 	github.com/gorilla/mux v1.8.0
 	github.com/justinas/alice v1.2.0
 	github.com/onsi/ginkgo/v2 v2.9.5
