@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.271
 	github.com/gorilla/mux v1.8.0
 	github.com/justinas/alice v1.2.0
-	github.com/onsi/ginkgo/v2 v2.9.5
+	github.com/onsi/ginkgo/v2 v2.9.7
 	github.com/onsi/gomega v1.27.7
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/zerolog v1.29.1
