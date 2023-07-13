@@ -8,7 +8,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/onsi/ginkgo/v2 v2.10.0
 	github.com/onsi/gomega v1.27.8
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/rs/zerolog v1.29.1
 	github.com/segmentio/kafka-go v0.4.42
 	github.com/segmentio/kafka-go/sasl/aws_msk_iam v0.1.0
@@ -55,7 +55,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rs/xid v1.4.0 // indirect
 	github.com/spf13/viper v1.16.0
 	golang.org/x/sys v0.8.0 // indirect
