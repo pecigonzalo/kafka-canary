@@ -42,7 +42,7 @@ func NewConsumerService(client client.Consumer, canaryConfig canary.Config, logg
 	}, []string{"partition"})
 
 	recordsConsumerFailed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name:        "consumer_error_total",
+		Name:        "records_consumer_error_total",
 		Namespace:   metricsNamespace,
 		Help:        "Total number of errors reported by the consumer",
 		ConstLabels: prometheus.Labels{"consumergroup": canaryConfig.ConsumerGroupID},

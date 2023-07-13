@@ -165,9 +165,10 @@ func (s topicService) Close() {
 func (s *topicService) reconcileConfiguration(ctx context.Context, brokers []client.BrokerInfo) error {
 	brokersNumber := len(brokers)
 	replicationFactor := min(brokersNumber, 3)
+	minISR := max(1, replicationFactor-1)
 	configs := map[string]string{
 		"cleanup.policy":      cleanupPolicy,
-		"min.insync.replicas": strconv.Itoa(replicationFactor),
+		"min.insync.replicas": strconv.Itoa(minISR),
 	}
 
 	err := s.admin.UpdateTopicConfig(ctx, s.canaryConfig.Topic, configs)
@@ -266,11 +267,12 @@ func (s *topicService) getTopic(ctx context.Context) (*client.TopicInfo, error) 
 func (s *topicService) createTopic(ctx context.Context, brokers []client.BrokerInfo) error {
 	brokersNumber := len(brokers)
 	replicationFactor := min(brokersNumber, 3)
+	minISR := max(1, replicationFactor-1)
 
 	assignments := s.requestAssignments(ctx, 0, brokers)
 	configs := map[string]string{
 		"cleanup.policy":      cleanupPolicy,
-		"min.insync.replicas": strconv.Itoa(replicationFactor),
+		"min.insync.replicas": strconv.Itoa(minISR),
 	}
 
 	if err := s.admin.CreateTopic(ctx, s.canaryConfig.Topic, assignments, configs); err != nil {
