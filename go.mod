@@ -64,5 +64,5 @@ require (
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/spf13/viper v1.18.2
 	golang.org/x/sys v0.15.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )
